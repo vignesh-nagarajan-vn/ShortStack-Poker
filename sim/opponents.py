@@ -90,6 +90,44 @@ class Maniac(Player):
         return Action.CHECK_CALL
 
 
+class McThreshold(Player):
+    """The most likely competitor design: Monte Carlo equity against one
+    random hand, compared with fixed thresholds and the pot odds.
+
+    raise_thr  equity needed to raise (pot-size when facing a bet)
+    bet_thr    equity needed to bet when checked to
+    margin     extra equity demanded over the pot odds before calling
+    bluff      chance to bet/raise as a bluff with weak equity
+    sims       Monte Carlo samples per decision (big values drain the time bank)
+    """
+
+    def __init__(self, config, sims: int = 10, raise_thr: float = 0.65, bet_thr: float = 0.55,
+                 margin: float = 0.0, bluff: float = 0.0, half_size: bool = False, seed: int = 11):
+        super().__init__(config)
+        self.sims, self.raise_thr, self.bet_thr = sims, raise_thr, bet_thr
+        self.margin, self.bluff, self.half_size = margin, bluff, half_size
+        self.rng = random.Random(seed)
+
+    def equity(self, obs) -> float:
+        from sim.heuristics import mc_equity
+        return mc_equity(obs.hole_cards, obs.board, self.sims, self.rng)
+
+    def act(self, obs):
+        from sim.heuristics import pot_odds
+        eq = self.equity(obs)
+        size = Action.RAISE_HALF if self.half_size else Action.RAISE_POT
+        can_raise = any(a in obs.legal_actions for a in RAISES)
+        if eq >= self.raise_thr and can_raise:
+            return _raise(obs, size)
+        if obs.to_call == 0:
+            if can_raise and (eq >= self.bet_thr or self.rng.random() < self.bluff):
+                return _raise(obs, size)
+            return Action.CHECK_CALL
+        if eq >= pot_odds(obs) + self.margin:
+            return Action.CHECK_CALL
+        return _fold_or_check(obs)
+
+
 class WeakTight(Player):
     """Calls or checks with any pair or better made hand by the river, folds to bets before that
     unless the preflop score is decent. Never raises: a passive, easily bullied bot."""

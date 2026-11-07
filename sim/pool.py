@@ -22,6 +22,14 @@ def registry() -> dict:
         "nit": (opp.Nit, {}),
         "maniac": (opp.Maniac, {}),
         "weak_tight": (opp.WeakTight, {}),
+        # "MC equity vs one random hand" family: the likely bulk of the field.
+        "mc_basic": (opp.McThreshold, {}),
+        "mc_tight": (opp.McThreshold, {"raise_thr": 0.7, "bet_thr": 0.6, "margin": 0.05}),
+        "mc_loose": (opp.McThreshold, {"raise_thr": 0.6, "bet_thr": 0.5, "margin": -0.03,
+                                       "bluff": 0.1}),
+        "mc_half": (opp.McThreshold, {"half_size": True, "bluff": 0.05}),
+        "mc_drain": (opp.McThreshold, {"sims": 40}),     # slightly too slow: bank runs out late
+        "mc_greedy": (opp.McThreshold, {"sims": 300}),   # far too slow: bank runs out early
     }
     for name, (cls, kwargs) in simple.items():
         bots[name] = class_factory(cls, name, **kwargs)
