@@ -38,6 +38,8 @@ DEFAULTS = {
     "commit_shove_eq": 0.55,     # when committed, shove instead of calling above this
     "low_spr": 1.0,              # SPR below this: bet more hands for value/protection
     "low_spr_bet_eq": 0.53,
+    # --- exploitation -----------------------------------------------------
+    "exploit": 1.0,              # 1 = shift parameters by detected opponent profile (bot/profile.py)
     # --- draws and bluffs ----------------------------------------------
     "draw_credit": 0.60,         # opponent flush draws count as this strong when they bet
     "semi_bluff_min_eq": 0.38,   # semi-bluff draws with at least this equity

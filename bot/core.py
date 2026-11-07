@@ -16,6 +16,7 @@ from bot import params as params_mod
 from bot.context import Ctx
 from bot.equity import EquityEngine
 from bot.opponent import RAISES, OpponentModel
+from bot.profile import Profiler
 from bot.showdown import ShowdownLearner
 from bot.strategy import Strategy
 from bot.timebank import FALLBACK_HEADROOM, TimeBank
@@ -38,6 +39,7 @@ class Brain:
         self.rng = random.Random(1107)
         self.opponent = OpponentModel()
         self.showdowns = ShowdownLearner(seed=7)
+        self.profiler = Profiler(self.params)
         self._hand_index = -1
         self._history = ()
         self._my_last = None
@@ -90,6 +92,8 @@ class Brain:
             we_raised = any(s.is_me and s.street == 0 and s.action in RAISES for s in steps)
             self.showdowns.add(result.opp_hole, result.board, [s for s in steps if not s.is_me],
                                we_raised)
+        if self.params.get("exploit", 1.0) and self.profiler.update(self.opponent):
+            self.strategy.p = self.profiler.params
 
 
 def get_brain(memory: dict, config: AgentConfig | None = None) -> Brain:
