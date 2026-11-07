@@ -64,8 +64,13 @@ class Strategy:
         if eq < 0:                      # out of thinking time: free checks, cheap calls only
             return ctx.call() if ctx.to_call == 0 or ctx.pot_odds < 0.2 else ctx.fold()
         size = Action.RAISE_POT if eq >= p["post_pot_size_eq"] else Action.RAISE_HALF
+        if ctx.to_call > 0 and ctx.committed_after_call(p["commit_ratio"]):
+            return self.committed(ctx, eq)
         if ctx.to_call == 0:
             bet_eq = p["post_bet_eq_river"] if ctx.street == Street.RIVER else p["post_bet_eq"]
+            if ctx.spr < p["low_spr"]:
+                bet_eq = min(bet_eq, p["low_spr_bet_eq"])
+                size = Action.RAISE_POT
             if eq >= bet_eq and ctx.can_raise:
                 return ctx.raise_(size)
             if ctx.can_raise and self.should_bluff(ctx, eq):
@@ -74,6 +79,15 @@ class Strategy:
         if eq >= p["post_raise_eq"] and ctx.can_raise:
             return ctx.raise_(size)
         if eq >= ctx.pot_odds + p["post_call_margin"]:
+            return ctx.call()
+        return ctx.fold()
+
+    def committed(self, ctx: Ctx, eq: float) -> Action:
+        """Calling commits our stack: decide with all-in odds, and shove
+        rather than call when we are a favourite (no free cards)."""
+        if eq >= self.p["commit_shove_eq"] and ctx.can_raise:
+            return ctx.raise_(Action.RAISE_POT)
+        if eq >= ctx.allin_odds:
             return ctx.call()
         return ctx.fold()
 
@@ -131,6 +145,8 @@ class Strategy:
         # Facing one or more raises.
         floor = self.range_floor(opp_raises)
         eq = self.equity_vs_range(ctx, floor)
+        if ctx.committed_after_call(p["commit_ratio"]):
+            return self.committed(ctx, eq)
         if eq >= p["pre_reraise_equity"] and ctx.can_raise:
             return ctx.raise_(Action.RAISE_POT)
         margin = p["pre_call_margin_ip"] if ctx.in_position else p["pre_call_margin_oop"]

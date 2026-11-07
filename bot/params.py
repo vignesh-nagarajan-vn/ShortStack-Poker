@@ -30,6 +30,11 @@ DEFAULTS = {
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.72,       # raise a bet
     "post_call_margin": 0.00,    # extra equity over pot odds to call
+    # --- low stack-to-pot ratio (40 bb stacks get committed fast) -------
+    "commit_ratio": 0.5,         # rest <= this x pot after calling = treat as all-in
+    "commit_shove_eq": 0.55,     # when committed, shove instead of calling above this
+    "low_spr": 1.0,              # SPR below this: bet more hands for value/protection
+    "low_spr_bet_eq": 0.53,
     # --- draws and bluffs ----------------------------------------------
     "draw_credit": 0.60,         # opponent flush draws count as this strong when they bet
     "semi_bluff_min_eq": 0.38,   # semi-bluff draws with at least this equity

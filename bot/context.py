@@ -47,6 +47,24 @@ class Ctx:
         pot = self.pot + min(self.to_call, self.obs.my_stack)
         return (self.obs.my_stack - min(self.to_call, self.obs.my_stack)) / max(1, pot)
 
+    def committed_after_call(self, ratio: float) -> bool:
+        """True if calling leaves so little behind (relative to the pot) that
+        the rest will go in anyway."""
+        call = min(self.to_call, self.obs.my_stack)
+        rest = self.obs.my_stack - call
+        return rest <= ratio * (self.pot + call)
+
+    @property
+    def allin_odds(self) -> float:
+        """Equity needed if calling now means getting all our chips in:
+        risk = everything we have left, reward = pot + what the opponent
+        can still match."""
+        call = min(self.to_call, self.obs.my_stack)
+        rest = self.obs.my_stack - call
+        opp_match = min(rest, max(0, self.obs.opp_stack))
+        risk = call + rest
+        return risk / max(1, self.pot + call + rest + opp_match)
+
     def raise_(self, size: Action = Action.RAISE_POT) -> Action:
         """Raise with the preferred size, or the other one, or call."""
         if size in self.legal:
