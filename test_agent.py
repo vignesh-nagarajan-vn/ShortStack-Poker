@@ -195,3 +195,98 @@ def test_reads_port_from_environment():
 # ---------------------------------------------------------------------------
 # Add your own tests below, e.g. "with two aces preflop my bot raises".
 # ---------------------------------------------------------------------------
+
+
+# ---- ShortStack hardening tests -------------------------------------------
+
+def _random_states(n, seed=11):
+    """Yield (game, seat) pairs from random play, covering every street,
+    all-ins, the raise cap and both seats."""
+    rng = random.Random(seed)
+    produced = 0
+    hand = 0
+    while produced < n:
+        game = Game(make_deal(f"fuzz{seed}", hand), button_seat=hand % 2, hand_index=hand % 1000)
+        hand += 1
+        while not game.is_terminal and produced < n:
+            yield game, game.to_act
+            produced += 1
+            legal = game.legal_actions()
+            weights = [3 if a in (Action.RAISE_HALF, Action.RAISE_POT) else 1 for a in legal]
+            game.apply(rng.choices(legal, weights)[0])
+
+
+def test_fuzz_every_decision_is_legal():
+    # Thousands of random states straight through the agent's functions.
+    module = load_agent()
+    module.new_half(AgentConfig(), module.MEMORY)
+    for game, seat in _random_states(4000):
+        obs = game.observation(seat)
+        action = module.choose_action(obs, module.MEMORY)
+        assert action in obs.legal_actions, (obs, action)
+
+
+def test_survives_missing_or_corrupted_memory():
+    module = load_agent()
+    game = Game(make_deal(3, 0), 0)
+    obs = game.observation(game.to_act)
+    assert module.choose_action(obs, {}) in obs.legal_actions          # new_half never ran
+    assert module.choose_action(obs, {"brain": 42}) in obs.legal_actions
+
+
+def test_on_hand_end_never_raises_on_odd_results():
+    from game import HandResult
+    module = load_agent()
+    module.new_half(AgentConfig(), module.MEMORY)
+    odd = [HandResult(5, 0, 4, True, (0, 1, 2, 3, 4), (5, 6, 7, 8, 9), "split"),
+           HandResult(6, -1, 3, False, (), None, "opp"),
+           HandResult(999, 2, 4, False, (0, 1, 2), None, "me")]
+    for r in odd:
+        module.on_hand_end(r, module.MEMORY)
+
+
+def test_time_budget_holds_on_a_slow_machine():
+    # Make every equity call twice as slow, then play a full half against a
+    # bot that raises whenever it can (the most decisions per hand). Our own
+    # thinking must stay well inside the 8 s bank, leaving room for the web
+    # server's per-request overhead.
+    import time as _time
+    from bot.equity import EquityEngine
+    from sim.players import BrainPlayer
+    from sim.run_match import play_half
+    from sim.players import class_factory
+    from sim.opponents import Maniac
+
+    real = EquityEngine.equity
+
+    def slow(self, hole, board, n, weight_fn=None):
+        start = _time.perf_counter()
+        eq = real(self, hole, board, n, weight_fn)
+        end = _time.perf_counter() + (_time.perf_counter() - start)   # burn the same time again
+        while _time.perf_counter() < end:
+            pass
+        return eq
+
+    EquityEngine.equity = slow
+    try:
+        out = play_half(lambda c: BrainPlayer(c), class_factory(Maniac, "maniac", raise_rate=1.0),
+                        "slow", 1, 1000)
+    finally:
+        EquityEngine.equity = real
+    st = out.stats["A"]
+    assert st.errors == 0
+    overhead = st.calls * 0.0006
+    assert st.time_seconds + overhead < 6.5, f"{st.time_seconds:.2f}s thinking over {st.calls} calls"
+
+
+def test_single_decision_is_fast():
+    import time as _time
+    module = load_agent()
+    module.new_half(AgentConfig(), module.MEMORY)
+    worst = 0.0
+    for game, seat in _random_states(1500, seed=12):
+        obs = game.observation(seat)
+        start = _time.perf_counter()
+        module.choose_action(obs, module.MEMORY)
+        worst = max(worst, _time.perf_counter() - start)
+    assert worst < 0.15, f"slowest decision took {worst * 1e3:.0f} ms (limit 1000 ms)"
