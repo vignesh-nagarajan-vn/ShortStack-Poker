@@ -7,32 +7,54 @@ stored in memory["brain"].
 
 from __future__ import annotations
 
+import time
+
 from game import Action, AgentConfig, HandResult, Observation
 from bot import fasteval, preflop  # noqa: F401  (load lookup tables at server startup)
+from bot import params as params_mod
+from bot.context import Ctx
+from bot.equity import EquityEngine
+from bot.strategy import Strategy
 from bot.timebank import TimeBank
 
 BRAIN_KEY = "brain"
+
+# Optional parameter overrides, set by the offline tuner before a half starts.
+PARAM_OVERRIDES: dict = {}
 
 
 class Brain:
     """All state for one half-match."""
 
-    def __init__(self, config: AgentConfig) -> None:
+    def __init__(self, config: AgentConfig, overrides: dict | None = None) -> None:
         self.config = config
+        self.params = params_mod.make(overrides if overrides is not None else PARAM_OVERRIDES)
         self.hands_seen = 0
         self.timebank = TimeBank(config.time_bank_seconds, config.num_hands)
+        self.engine = EquityEngine(seed=20261107)
+        self.strategy = Strategy(self)
+
+    # --- services used by the strategy ---------------------------------
+
+    def samples(self, ctx: Ctx) -> int:
+        return self.timebank.samples(ctx.obs.hand_index)
+
+    def equity(self, hole, board, n: int, weight_fn=None) -> float:
+        start = time.perf_counter()
+        eq = self.engine.equity(hole, board, n, weight_fn)
+        self.timebank.record_samples(n, time.perf_counter() - start)
+        return eq
+
+    # --- entry points --------------------------------------------------
 
     def choose(self, obs: Observation) -> Action:
         """Pick an action for the current decision (timed)."""
         self.timebank.begin()
         try:
             self.timebank.decisions += 1
-            return self.decide(obs)
+            return self.strategy.decide(Ctx(obs))
         finally:
             self.timebank.end(is_request=True)
-
-    def decide(self, obs: Observation) -> Action:
-        return Action.CHECK_CALL
 
     def hand_end(self, result: HandResult) -> None:
         """Learn from a finished hand (timed, but rides along with a request)."""
