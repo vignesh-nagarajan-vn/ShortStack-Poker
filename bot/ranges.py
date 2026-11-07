@@ -12,6 +12,7 @@ import numpy as np
 
 from bot import fasteval as fe
 from bot import preflop
+from bot.draws import flush_draw
 
 FLOOR_WEIGHT = 0.06
 
@@ -43,7 +44,8 @@ def made_strength(opp: np.ndarray, board) -> np.ndarray:
     return order / max(1, len(opp) - 1)
 
 
-def postflop_weight(board, pre_floor: float, aggression: float, softness: float = 0.12):
+def postflop_weight(board, pre_floor: float, aggression: float, softness: float = 0.12,
+                    draw_credit: float = 0.6):
     """Opponent hands that fit both their preflop line (percentile floor)
     and their postflop aggression this hand (made-hand strength above the
     `aggression` share of the sample). 0 aggression = they only checked
@@ -57,6 +59,9 @@ def postflop_weight(board, pre_floor: float, aggression: float, softness: float 
             w *= np.maximum(_sigmoid((pct - pre_floor) / 0.06), FLOOR_WEIGHT)
         if aggression > 0:
             strength = made_strength(opp, board)
+            if len(board) < 5 and draw_credit > 0:
+                # Bettors also hold draws: a flush draw counts as a decent hand.
+                strength = np.maximum(strength, draw_credit * flush_draw(opp, board))
             w *= np.maximum(_sigmoid((strength - aggression) / softness), FLOOR_WEIGHT)
         return w
 

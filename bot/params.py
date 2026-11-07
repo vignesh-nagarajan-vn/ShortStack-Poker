@@ -30,6 +30,12 @@ DEFAULTS = {
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.72,       # raise a bet
     "post_call_margin": 0.00,    # extra equity over pot odds to call
+    # --- draws and bluffs ----------------------------------------------
+    "draw_credit": 0.60,         # opponent flush draws count as this strong when they bet
+    "semi_bluff_min_eq": 0.38,   # semi-bluff draws with at least this equity
+    "semi_bluff_freq": 0.50,     # how often we bet a qualifying draw when checked to
+    "river_bluff_freq": 0.06,    # bet air on the river in position when checked to
+    "river_bluff_max_eq": 0.25,
 }
 
 

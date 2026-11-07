@@ -7,6 +7,7 @@ stored in memory["brain"].
 
 from __future__ import annotations
 
+import random
 import time
 
 from game import Action, AgentConfig, HandResult, Observation
@@ -32,6 +33,7 @@ class Brain:
         self.hands_seen = 0
         self.timebank = TimeBank(config.time_bank_seconds, config.num_hands)
         self.engine = EquityEngine(seed=20261107)
+        self.rng = random.Random(1107)
         self.strategy = Strategy(self)
 
     # --- services used by the strategy ---------------------------------

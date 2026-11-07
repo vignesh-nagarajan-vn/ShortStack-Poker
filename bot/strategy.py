@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from game import Action, Street
 from bot import preflop, ranges
+from bot.draws import has_draw
 from bot.context import RAISES, Ctx
 
 
@@ -53,7 +54,8 @@ class Strategy:
         if n <= 0:
             return -1.0
         weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx),
-                                        self.opponent_aggression(ctx))
+                                        self.opponent_aggression(ctx),
+                                        draw_credit=self.p["draw_credit"])
         return self.brain.equity(ctx.obs.hole_cards, ctx.obs.board, n, weight)
 
     def postflop(self, ctx: Ctx) -> Action:
@@ -66,12 +68,26 @@ class Strategy:
             bet_eq = p["post_bet_eq_river"] if ctx.street == Street.RIVER else p["post_bet_eq"]
             if eq >= bet_eq and ctx.can_raise:
                 return ctx.raise_(size)
+            if ctx.can_raise and self.should_bluff(ctx, eq):
+                return ctx.raise_(Action.RAISE_HALF)
             return ctx.call()
         if eq >= p["post_raise_eq"] and ctx.can_raise:
             return ctx.raise_(size)
         if eq >= ctx.pot_odds + p["post_call_margin"]:
             return ctx.call()
         return ctx.fold()
+
+    def should_bluff(self, ctx: Ctx, eq: float) -> bool:
+        """Semi-bluff real draws before the river; rarely bluff air on the
+        river from position. Opponent modeling scales these later."""
+        p, rng = self.p, self.brain.rng
+        if ctx.street != Street.RIVER:
+            if eq >= p["semi_bluff_min_eq"] and has_draw(ctx.obs.hole_cards, ctx.obs.board):
+                return rng.random() < p["semi_bluff_freq"]
+            return False
+        if ctx.in_position and eq <= p["river_bluff_max_eq"]:
+            return rng.random() < p["river_bluff_freq"]
+        return False
 
     # ------------------------------------------------------------------
     def range_floor(self, opp_raises: int) -> float:
