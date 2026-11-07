@@ -45,6 +45,7 @@ def registry() -> dict:
 
 SELF_VARIANTS = {
     "self_static": {"learn_preflop": 0.0, "learn_postflop": 0.0},
+    "self_pretune": {"sb_fold_below": 0.10, "sb_raise_half_above": 0.50, "post_raise_eq": 0.72},
     "self_learnpost": {"learn_postflop": 1.0},
     "self_noexploit": {"exploit": 0.0},
     "self_nosteal": {"autopilot_steal": 0.0},

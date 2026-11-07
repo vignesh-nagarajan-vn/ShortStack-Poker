@@ -6,8 +6,8 @@ Values are fractions of 1 unless noted. "pct" means preflop percentile
 
 DEFAULTS = {
     # --- preflop: button (small blind) first action -------------------
-    "sb_fold_below": 0.10,       # fold the worst hands instead of completing
-    "sb_raise_half_above": 0.50, # open half-pot with these
+    "sb_fold_below": 0.05,       # fold the worst hands instead of completing (tuned from 0.10)
+    "sb_raise_half_above": 0.60, # open half-pot with these (tuned from 0.50)
     "sb_raise_pot_above": 0.80,  # open pot with these
     # --- preflop: big blind after a limp -----------------------------
     "bb_raise_above": 0.70,
@@ -30,7 +30,7 @@ DEFAULTS = {
     "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
     "post_bet_eq_river": 0.63,
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
-    "post_raise_eq": 0.72,       # raise a bet
+    "post_raise_eq": 0.68,       # raise a bet (tuned from 0.72)
     "post_call_margin": 0.00,    # extra equity over pot odds to call
     "barrel_weight": 0.6,        # how much future bets raise the price of a call (x aggression x streets left)
     # --- low stack-to-pot ratio (40 bb stacks get committed fast) -------
