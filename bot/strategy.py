@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from game import Action, Street
 from bot import preflop, ranges
-from bot.context import Ctx
+from bot.context import RAISES, Ctx
 
 
 class Strategy:
@@ -24,8 +24,54 @@ class Strategy:
             return self.preflop(ctx)
         return self.postflop(ctx)
 
+    # ------------------------------------------------------------------
+    def opponent_preflop_floor(self, ctx: Ctx) -> float:
+        """Percentile floor implied by the opponent's preflop line."""
+        hist = ctx.obs.action_history
+        opp_pre = [a for a in hist if not a.is_me and a.street == Street.PREFLOP]
+        raises = sum(1 for a in opp_pre if a.action in RAISES)
+        if raises:
+            return self.range_floor(raises)
+        we_raised = any(a.is_me and a.street == Street.PREFLOP and a.action in RAISES for a in hist)
+        if we_raised and opp_pre:
+            return self.p["range_floor_call"]
+        return 0.0
+
+    def opponent_aggression(self, ctx: Ctx) -> float:
+        """How strong the opponent's postflop betting says their made hand is."""
+        p = self.p
+        k = ctx.opp_raises_this_street
+        level = 0.0 if k == 0 else p["agg_bet"] if k == 1 else p["agg_raise"] if k == 2 else p["agg_reraise"]
+        earlier = {a.street for a in ctx.obs.action_history
+                   if not a.is_me and a.action in RAISES and Street.PREFLOP < a.street < ctx.street}
+        if earlier:
+            level = max(level, p["agg_bet"]) + p["agg_prev_street"] * len(earlier)
+        return min(level, 0.9)
+
+    def postflop_equity(self, ctx: Ctx) -> float:
+        n = self.brain.samples(ctx)
+        if n <= 0:
+            return -1.0
+        weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx),
+                                        self.opponent_aggression(ctx))
+        return self.brain.equity(ctx.obs.hole_cards, ctx.obs.board, n, weight)
+
     def postflop(self, ctx: Ctx) -> Action:
-        return ctx.call()
+        p = self.p
+        eq = self.postflop_equity(ctx)
+        if eq < 0:                      # out of thinking time: free checks, cheap calls only
+            return ctx.call() if ctx.to_call == 0 or ctx.pot_odds < 0.2 else ctx.fold()
+        size = Action.RAISE_POT if eq >= p["post_pot_size_eq"] else Action.RAISE_HALF
+        if ctx.to_call == 0:
+            bet_eq = p["post_bet_eq_river"] if ctx.street == Street.RIVER else p["post_bet_eq"]
+            if eq >= bet_eq and ctx.can_raise:
+                return ctx.raise_(size)
+            return ctx.call()
+        if eq >= p["post_raise_eq"] and ctx.can_raise:
+            return ctx.raise_(size)
+        if eq >= ctx.pot_odds + p["post_call_margin"]:
+            return ctx.call()
+        return ctx.fold()
 
     # ------------------------------------------------------------------
     def range_floor(self, opp_raises: int) -> float:

@@ -37,7 +37,10 @@ class Brain:
     # --- services used by the strategy ---------------------------------
 
     def samples(self, ctx: Ctx) -> int:
-        return self.timebank.samples(ctx.obs.hand_index)
+        n = self.timebank.samples(ctx.obs.hand_index)
+        if n == 0 and self.timebank.charged_estimate() < self.timebank.bank - 1.5:
+            n = 40   # logic share used up, but the bank itself is fine: cheap estimate
+        return n
 
     def equity(self, hole, board, n: int, weight_fn=None) -> float:
         start = time.perf_counter()

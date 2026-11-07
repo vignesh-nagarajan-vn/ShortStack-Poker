@@ -18,6 +18,18 @@ DEFAULTS = {
     "pre_reraise_equity": 0.57,  # equity vs their range needed to re-raise
     "pre_call_margin_oop": 0.03, # extra equity over pot odds when out of position
     "pre_call_margin_ip": 0.00,
+    # --- postflop: reading the opponent's range ----------------------
+    "range_floor_call": 0.25,    # opponent called a preflop raise: drop their worst hands
+    "agg_bet": 0.40,             # one bet this street = made-hand strength above this share
+    "agg_raise": 0.62,           # a raise
+    "agg_reraise": 0.78,         # two or more raises
+    "agg_prev_street": 0.08,     # extra per earlier postflop street they bet
+    # --- postflop: our actions ----------------------------------------
+    "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
+    "post_bet_eq_river": 0.63,
+    "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
+    "post_raise_eq": 0.72,       # raise a bet
+    "post_call_margin": 0.00,    # extra equity over pot odds to call
 }
 
 

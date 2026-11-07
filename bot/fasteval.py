@@ -112,6 +112,13 @@ def board_triples(boards: np.ndarray) -> np.ndarray:
                         boards[..., TRIPLE_POS[:, 2]]]
 
 
+def board_triples_partial(board) -> np.ndarray:
+    """Triple indexes for every 3-card subset of a 3-, 4- or 5-card board
+    (1, 4 or 10 triples): the "made hand so far" on an incomplete board."""
+    board = list(board)
+    return np.array([TRIPLE_INDEX[a, b, c] for a, b, c in combinations(board, 3)], dtype=np.intp)
+
+
 def best_rank_batch(pairs: np.ndarray, triples: np.ndarray) -> np.ndarray:
     """(N, 10) pairs and (N, 10) triples -> (N,) best hand rank (Omaha 2 + 3)."""
     return RANK[pairs[:, :, None], triples[:, None, :]].max(axis=(1, 2))
