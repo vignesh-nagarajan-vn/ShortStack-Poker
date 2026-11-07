@@ -41,6 +41,11 @@ DEFAULTS = {
     # --- exploitation -----------------------------------------------------
     "exploit": 1.0,              # 1 = shift parameters by detected opponent profile (bot/profile.py)
     "autopilot_steal": 1.0,      # 1 = raise every hand into an opponent stuck on check/fold
+    # --- our own image (bot/image.py) ----------------------------------
+    "image_ftb_cap": 0.50,       # keep our fold-to-bet below adaptive bots' bluff trigger
+    "image_call_bonus": 0.04,    # equity we give up on marginal calls while above it...
+    "image_attack_gap": 0.08,    # ...and the opponent's recent aggression is this far above its average
+    "image_agg_cap": 0.45,       # above this aggression, halve our bluffs
     # --- draws and bluffs ----------------------------------------------
     "draw_credit": 0.60,         # opponent flush draws count as this strong when they bet
     "semi_bluff_min_eq": 0.38,   # semi-bluff draws with at least this equity

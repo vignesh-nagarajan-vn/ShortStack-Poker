@@ -48,6 +48,7 @@ SELF_VARIANTS = {
     "self_learnpost": {"learn_postflop": 1.0},
     "self_noexploit": {"exploit": 0.0},
     "self_nosteal": {"autopilot_steal": 0.0},
+    "self_noimage": {"image_call_bonus": 0.0, "image_agg_cap": 1.0},
     "self_nobluff": {"semi_bluff_freq": 0.0, "river_bluff_freq": 0.0},
     "self_norange": {"agg_bet": 0.0, "agg_raise": 0.0, "agg_reraise": 0.0, "agg_prev_street": 0.0,
                      "range_floor_call": 0.0},

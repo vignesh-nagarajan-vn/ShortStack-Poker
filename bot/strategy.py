@@ -102,7 +102,8 @@ class Strategy:
             return ctx.call()
         if eq >= p["post_raise_eq"] and ctx.can_raise:
             return ctx.raise_(size)
-        if eq >= self.call_odds(ctx) + p["post_call_margin"]:
+        bonus = self.brain.image.call_bonus(p, self.brain.profiler.profile, self.brain.opponent)
+        if eq >= self.call_odds(ctx) + p["post_call_margin"] - bonus:
             return ctx.call()
         return ctx.fold()
 
@@ -130,12 +131,13 @@ class Strategy:
         """Semi-bluff real draws before the river; rarely bluff air on the
         river from position. Opponent modeling scales these later."""
         p, rng = self.p, self.brain.rng
+        scale = self.brain.image.bluff_scale(p)
         if ctx.street != Street.RIVER:
             if eq >= p["semi_bluff_min_eq"] and has_draw(ctx.obs.hole_cards, ctx.obs.board):
-                return rng.random() < p["semi_bluff_freq"]
+                return rng.random() < p["semi_bluff_freq"] * scale
             return False
         if ctx.in_position and eq <= p["river_bluff_max_eq"]:
-            return rng.random() < p["river_bluff_freq"]
+            return rng.random() < p["river_bluff_freq"] * scale
         return False
 
     # ------------------------------------------------------------------
