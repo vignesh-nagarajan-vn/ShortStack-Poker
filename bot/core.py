@@ -15,6 +15,7 @@ from bot import fasteval, preflop  # noqa: F401  (load lookup tables at server s
 from bot import params as params_mod
 from bot.context import Ctx
 from bot.equity import EquityEngine
+from bot.opponent import OpponentModel
 from bot.strategy import Strategy
 from bot.timebank import FALLBACK_HEADROOM, TimeBank
 
@@ -34,6 +35,10 @@ class Brain:
         self.timebank = TimeBank(config.time_bank_seconds, config.num_hands)
         self.engine = EquityEngine(seed=20261107)
         self.rng = random.Random(1107)
+        self.opponent = OpponentModel()
+        self._hand_index = -1
+        self._history = ()
+        self._my_last = None
         self.strategy = Strategy(self)
 
     # --- services used by the strategy ---------------------------------
@@ -57,7 +62,9 @@ class Brain:
         self.timebank.begin()
         try:
             self.timebank.decisions += 1
-            return self.strategy.decide(Ctx(obs))
+            action = self.strategy.decide(Ctx(obs))
+            self._hand_index, self._history, self._my_last = obs.hand_index, obs.action_history, action
+            return action
         finally:
             self.timebank.end(is_request=True)
 
@@ -71,7 +78,12 @@ class Brain:
             self.timebank.end(is_request=False)
 
     def learn(self, result: HandResult) -> None:
-        pass
+        if self._hand_index == result.hand_index:
+            history, my_last = self._history, self._my_last
+        else:                       # we never acted this hand (opponent folded first)
+            history, my_last = (), None
+        steps = OpponentModel.rebuild(history, my_last, result)
+        self.opponent.observe_hand(steps, result)
 
 
 def get_brain(memory: dict, config: AgentConfig | None = None) -> Brain:
