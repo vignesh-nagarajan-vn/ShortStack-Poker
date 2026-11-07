@@ -128,6 +128,79 @@ class McThreshold(Player):
         return _fold_or_check(obs)
 
 
+class AdaptiveExploiter(McThreshold):
+    """What a more ambitious team builds: the MC threshold bot plus an
+    opponent model (VPIP, PFR, aggression, fold-to-bet) that classifies us
+    after a warm-up and switches into a matching exploit mode:
+
+      folds a lot to bets  -> bluff much more
+      raises a lot         -> call down wider, stop bluffing
+      plays few hands      -> steal preflop with any hand
+      never folds          -> value bet thinner, never bluff
+    """
+
+    WARMUP = 40
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        self.base = (self.raise_thr, self.bet_thr, self.margin, self.bluff)
+        self.hands = 0
+        self.vpip = 0
+        self.opp_raises = 0
+        self.opp_actions = 0
+        self.faced_bets = 0
+        self.folds_to_bet = 0
+        self.mode = "default"
+        self._last_history = ()
+        self._we_bet_last = False
+
+    def act(self, obs):
+        self._last_history = obs.action_history
+        self._we_bet_last = False
+        if self.mode == "steal" and obs.street == Street.PREFLOP and obs.is_button:
+            if any(a in obs.legal_actions for a in RAISES):
+                self._we_bet_last = True
+                return _raise(obs, Action.RAISE_HALF)
+        action = super().act(obs)
+        self._we_bet_last = action in RAISES
+        return action
+
+    def hand_end(self, result):
+        self.hands += 1
+        opp = [a for a in self._last_history if not a.is_me]
+        if any(a.street == Street.PREFLOP and a.action != Action.FOLD for a in opp):
+            self.vpip += 1
+        self.opp_actions += len(opp)
+        self.opp_raises += sum(1 for a in opp if a.action in RAISES)
+        # Each of our bets/raises the opponent answered is a "faced bet".
+        hist = list(self._last_history)
+        for i, a in enumerate(hist):
+            if a.is_me and a.action in RAISES and i + 1 < len(hist) and not hist[i + 1].is_me:
+                self.faced_bets += 1
+        if self._we_bet_last and not result.went_to_showdown and result.winner == "me":
+            self.faced_bets += 1
+            self.folds_to_bet += 1
+        if self.hands >= self.WARMUP and self.hands % 10 == 0:
+            self._reclassify()
+
+    def _reclassify(self):
+        raise_thr, bet_thr, margin, bluff = self.base
+        vpip = self.vpip / self.hands
+        aggr = self.opp_raises / max(1, self.opp_actions)
+        ftb = self.folds_to_bet / max(1, self.faced_bets)
+        if aggr > 0.45:
+            self.mode, margin, bluff = "call_down", margin - 0.08, 0.0
+        elif ftb > 0.55:
+            self.mode, bluff = "bluff", 0.45
+        elif vpip < 0.45:
+            self.mode = "steal"
+        elif ftb < 0.2:
+            self.mode, bet_thr, bluff = "value", bet_thr - 0.05, 0.0
+        else:
+            self.mode = "default"
+        self.raise_thr, self.bet_thr, self.margin, self.bluff = raise_thr, bet_thr, margin, bluff
+
+
 class WeakTight(Player):
     """Calls or checks with any pair or better made hand by the river, folds to bets before that
     unless the preflop score is decent. Never raises: a passive, easily bullied bot."""

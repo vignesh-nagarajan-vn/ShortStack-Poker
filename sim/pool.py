@@ -30,6 +30,9 @@ def registry() -> dict:
         "mc_half": (opp.McThreshold, {"half_size": True, "bluff": 0.05}),
         "mc_drain": (opp.McThreshold, {"sims": 40}),     # slightly too slow: bank runs out late
         "mc_greedy": (opp.McThreshold, {"sims": 300}),   # far too slow: bank runs out early
+        # Adaptive bots that model and exploit their opponent.
+        "adaptive": (opp.AdaptiveExploiter, {}),
+        "adaptive_loose": (opp.AdaptiveExploiter, {"raise_thr": 0.6, "bet_thr": 0.5, "bluff": 0.1}),
     }
     for name, (cls, kwargs) in simple.items():
         bots[name] = class_factory(cls, name, **kwargs)
