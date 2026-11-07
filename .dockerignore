@@ -1,0 +1,15 @@
+# Keep the tournament image small: only what the bot needs while playing.
+# Never list agent.py, bot/, data/, game.py or evaluator.py here.
+.git
+.gitignore
+.gitattributes
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.venv
+venv
+results
+sim
+docs
+tools/build_preflop_table.py
+*.md

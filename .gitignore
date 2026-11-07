@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local match output
+*.json.log
+results/
+h1.json
+h2.json
+out.json
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

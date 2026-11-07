@@ -1,0 +1,5 @@
+# Shell scripts and Dockerfiles must keep LF endings or bash/docker break.
+* text=auto
+*.sh text eol=lf
+docker/* text eol=lf
+*.npy binary
