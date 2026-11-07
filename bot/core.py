@@ -15,7 +15,8 @@ from bot import fasteval, preflop  # noqa: F401  (load lookup tables at server s
 from bot import params as params_mod
 from bot.context import Ctx
 from bot.equity import EquityEngine
-from bot.opponent import OpponentModel
+from bot.opponent import RAISES, OpponentModel
+from bot.showdown import ShowdownLearner
 from bot.strategy import Strategy
 from bot.timebank import FALLBACK_HEADROOM, TimeBank
 
@@ -36,6 +37,7 @@ class Brain:
         self.engine = EquityEngine(seed=20261107)
         self.rng = random.Random(1107)
         self.opponent = OpponentModel()
+        self.showdowns = ShowdownLearner(seed=7)
         self._hand_index = -1
         self._history = ()
         self._my_last = None
@@ -84,6 +86,10 @@ class Brain:
             history, my_last = (), None
         steps = OpponentModel.rebuild(history, my_last, result)
         self.opponent.observe_hand(steps, result)
+        if result.went_to_showdown and result.opp_hole and len(result.board) == 5:
+            we_raised = any(s.is_me and s.street == 0 and s.action in RAISES for s in steps)
+            self.showdowns.add(result.opp_hole, result.board, [s for s in steps if not s.is_me],
+                               we_raised)
 
 
 def get_brain(memory: dict, config: AgentConfig | None = None) -> Brain:
