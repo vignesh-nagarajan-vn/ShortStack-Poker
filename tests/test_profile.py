@@ -35,3 +35,12 @@ def test_needs_two_evaluations_to_switch():
     m.hands = 60
     assert prof.update(m)
     assert prof.profile == "maniac"
+
+
+def test_mode_switch_uses_recent_rates():
+    from bot.profile import shifted
+    m = _model(aggression=0.2, fold_to_bet=0.4)        # long-run: honest-ish
+    for _ in range(60):
+        m.rates["aggression"].add(True)                  # ...but now raising every time
+    assert shifted(m)
+    assert classify(m, recent=True) == "maniac"

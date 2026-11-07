@@ -16,6 +16,7 @@ from bot import params as params_mod
 from bot.context import Ctx
 from bot.equity import EquityEngine
 from bot.opponent import RAISES, OpponentModel
+from bot.autopilot import AutopilotDetector
 from bot.profile import Profiler
 from bot.showdown import ShowdownLearner
 from bot.strategy import Strategy
@@ -40,6 +41,7 @@ class Brain:
         self.opponent = OpponentModel()
         self.showdowns = ShowdownLearner(seed=7)
         self.profiler = Profiler(self.params)
+        self.autopilot = AutopilotDetector()
         self._hand_index = -1
         self._history = ()
         self._my_last = None
@@ -88,6 +90,7 @@ class Brain:
             history, my_last = (), None
         steps = OpponentModel.rebuild(history, my_last, result)
         self.opponent.observe_hand(steps, result)
+        self.autopilot.observe(*OpponentModel.opponent_facing(steps))
         if result.went_to_showdown and result.opp_hole and len(result.board) == 5:
             we_raised = any(s.is_me and s.street == 0 and s.action in RAISES for s in steps)
             self.showdowns.add(result.opp_hole, result.board, [s for s in steps if not s.is_me],

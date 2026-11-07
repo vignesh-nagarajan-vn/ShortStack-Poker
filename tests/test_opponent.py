@@ -6,7 +6,7 @@ from sim.run_match import play_half
 from sim.players import class_factory
 
 
-def _model_after_half(opponent_cls, deals=300):
+def _brain_after_half(opponent_cls, deals=300):
     holder = {}
 
     def make_us(config):
@@ -15,15 +15,21 @@ def _model_after_half(opponent_cls, deals=300):
         return p
 
     play_half(make_us, class_factory(opponent_cls, "opp"), "model", 1, deals)
-    return holder["p"].brain.opponent
+    return holder["p"].brain
 
 
-def test_check_folder_is_read_as_passive_and_folding():
-    m = _model_after_half(CheckFold)
+def _model_after_half(opponent_cls, deals=300):
+    return _brain_after_half(opponent_cls, deals).opponent
+
+
+def test_check_folder_is_read_as_passive_and_put_on_autopilot():
+    brain = _brain_after_half(CheckFold)
+    m = brain.opponent
     assert m.hands == 300
     assert m.rate("pfr") < 0.05
-    assert m.rate("aggression") < 0.1
-    assert m.rate("fold_to_bet") > 0.7   # few postflop samples: still near the prior
+    assert m.rate("vpip") < 0.05
+    # It folds to every bet, so we steal every hand and it never sees a flop.
+    assert brain.autopilot.active
 
 
 def test_maniac_is_read_as_aggressive():

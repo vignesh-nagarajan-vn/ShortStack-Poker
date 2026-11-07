@@ -10,6 +10,10 @@ Profiles (checked in this order, from the shrunk opponent rates):
   honest   rarely bets                     -> their bets mean strength: give
                                              their bets more credit
 
+Mode switches: if the opponent's recency-weighted rates drift far from its
+half-long averages (an adaptive bot changing gear), we classify on the
+recent rates instead.
+
 Hysteresis: a new profile must win two evaluations in a row (every 20
 hands after a 40-hand warm-up) before we switch, so noise near a boundary
 doesn't make us flip-flop, and so we're hard to read in return.
@@ -35,9 +39,21 @@ ADJUST = {
 }
 
 
-def classify(opp) -> str:
-    agg, pfr = opp.rate("aggression"), opp.rate("pfr")
-    ftb, vpip = opp.rate("fold_to_bet"), opp.rate("vpip")
+SHIFT_KEYS = ("aggression", "pfr", "fold_to_bet", "vpip")
+SHIFT_GAP = 0.20
+
+
+def shifted(opp) -> bool:
+    """True if the opponent's recent play differs a lot from its overall
+    average: an adaptive bot that changed modes, or one that ran out of
+    time. We then classify on the recent rates instead."""
+    return any(abs(opp.recent(k) - opp.rate(k)) > SHIFT_GAP for k in SHIFT_KEYS)
+
+
+def classify(opp, recent: bool = False) -> str:
+    get = opp.recent if recent else opp.rate
+    agg, pfr = get("aggression"), get("pfr")
+    ftb, vpip = get("fold_to_bet"), get("vpip")
     if agg > 0.55 or pfr > 0.65:
         return "maniac"
     if ftb > 0.58 or vpip < 0.40:
@@ -63,12 +79,14 @@ class Profiler:
         self.candidate = "default"
         self.streak = 0
         self.params = dict(base)
+        self.shift_seen = False
 
     def update(self, opp) -> bool:
         """Re-classify if it's time. Returns True if the profile changed."""
         if opp.hands < WARMUP_HANDS or opp.hands % EVERY:
             return False
-        new = classify(opp)
+        self.shift_seen = shifted(opp)
+        new = classify(opp, recent=self.shift_seen)
         if new == self.profile:
             self.candidate, self.streak = new, 0
             return False

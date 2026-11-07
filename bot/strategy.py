@@ -21,6 +21,13 @@ class Strategy:
 
     # ------------------------------------------------------------------
     def decide(self, ctx: Ctx) -> Action:
+        auto = self.brain.autopilot
+        if auto.active:
+            if any(not a.is_me and (a.action in RAISES or (a.action == Action.CHECK_CALL and a.amount > 0))
+                   for a in ctx.obs.action_history):
+                auto.woke_up()          # they called or raised: back to normal play
+            elif ctx.can_raise and self.p["autopilot_steal"]:
+                return ctx.raise_(Action.RAISE_HALF)
         if ctx.street == Street.PREFLOP:
             return self.preflop(ctx)
         return self.postflop(ctx)

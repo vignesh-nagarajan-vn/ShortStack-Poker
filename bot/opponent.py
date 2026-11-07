@@ -118,6 +118,15 @@ class OpponentModel:
             opp_steps = [s for s in steps if not s.is_me]
             self.showdowns.append((tuple(result.opp_hole), tuple(result.board), opp_steps))
 
+    @classmethod
+    def opponent_facing(cls, steps: list[Step]) -> tuple[list[Step], list[bool]]:
+        """The opponent's steps and whether each one faced a bet. The small
+        blind's first action faces the big blind, so it counts as facing."""
+        opp = [s for s in steps if not s.is_me]
+        facing = [cls._facing_raise(steps, s) or (s is steps[0] and s.street == Street.PREFLOP)
+                  for s in opp]
+        return opp, facing
+
     @staticmethod
     def _facing_raise(steps: list[Step], step: Step) -> bool:
         """Was the opponent facing a bet/raise from us when taking `step`?"""
