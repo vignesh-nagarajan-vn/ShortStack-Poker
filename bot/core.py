@@ -16,7 +16,7 @@ from bot import params as params_mod
 from bot.context import Ctx
 from bot.equity import EquityEngine
 from bot.strategy import Strategy
-from bot.timebank import TimeBank
+from bot.timebank import FALLBACK_HEADROOM, TimeBank
 
 BRAIN_KEY = "brain"
 
@@ -40,7 +40,7 @@ class Brain:
 
     def samples(self, ctx: Ctx) -> int:
         n = self.timebank.samples(ctx.obs.hand_index)
-        if n == 0 and self.timebank.charged_estimate() < self.timebank.bank - 1.5:
+        if n == 0 and self.timebank.charged_estimate() < self.timebank.bank - FALLBACK_HEADROOM:
             n = 40   # logic share used up, but the bank itself is fine: cheap estimate
         return n
 

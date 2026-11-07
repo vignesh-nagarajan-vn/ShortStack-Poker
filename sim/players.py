@@ -91,3 +91,27 @@ def class_factory(cls, name: str, **kwargs) -> Callable[[AgentConfig], Player]:
 def agent_factory() -> Callable[[AgentConfig], Player]:
     """Our own bot, exactly as agent.py runs it (safety wrapper included)."""
     return module_factory(os.path.join(ROOT, "agent.py"), "shortstack")
+
+
+class BrainPlayer(Player):
+    """Our bot built directly from bot.core.Brain with parameter overrides,
+    wrapped in the same safety checks as agent.py. Used for self-play
+    (earlier versions, ablations) and for parameter tuning."""
+
+    def __init__(self, config: AgentConfig, overrides: dict | None = None) -> None:
+        super().__init__(config)
+        from bot.core import Brain
+        self.brain = Brain(config, overrides or {})
+
+    def act(self, obs: Observation) -> Action:
+        from bot.safety import ensure_legal, fallback_action
+        try:
+            return ensure_legal(self.brain.choose(obs), obs)
+        except Exception:
+            return fallback_action(obs)
+
+    def hand_end(self, result: HandResult) -> None:
+        try:
+            self.brain.hand_end(result)
+        except Exception:
+            pass

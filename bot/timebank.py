@@ -15,8 +15,12 @@ from __future__ import annotations
 
 import time
 
-OVERHEAD_PER_REQUEST = 0.0006   # seconds charged per request beyond our code (measured, padded)
-SHARE_FOR_LOGIC = 0.55          # fraction of the bank our own code may spend
+# Measured with the real judge on a dev laptop: ~0.29 ms charged per request
+# beyond our own code (FastAPI + JSON, after the 1 ms grace). Padded 2x for
+# a slower tournament machine.
+OVERHEAD_PER_REQUEST = 0.0006   # seconds charged per request beyond our code
+SHARE_FOR_LOGIC = 0.45          # fraction of the bank our own code may spend
+FALLBACK_HEADROOM = 2.5         # cheap 40-sample estimates only while this much bank is left
 HARD_CAP_SECONDS = 0.030        # never think longer than this on one decision
 MIN_SAMPLES = 60                # below this, equity is too noisy to be worth the time
 MAX_SAMPLES = 1500
