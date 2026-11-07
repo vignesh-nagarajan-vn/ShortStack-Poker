@@ -11,5 +11,6 @@ venv
 results
 sim
 docs
-tools/build_preflop_table.py
+tools/build_*.py
+tests
 *.md
