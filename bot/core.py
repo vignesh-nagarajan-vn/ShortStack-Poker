@@ -8,6 +8,7 @@ stored in memory["brain"].
 from __future__ import annotations
 
 from game import Action, AgentConfig, HandResult, Observation
+from bot.timebank import TimeBank
 
 BRAIN_KEY = "brain"
 
@@ -18,14 +19,31 @@ class Brain:
     def __init__(self, config: AgentConfig) -> None:
         self.config = config
         self.hands_seen = 0
+        self.timebank = TimeBank(config.time_bank_seconds, config.num_hands)
 
     def choose(self, obs: Observation) -> Action:
-        """Pick an action for the current decision."""
+        """Pick an action for the current decision (timed)."""
+        self.timebank.begin()
+        try:
+            self.timebank.decisions += 1
+            return self.decide(obs)
+        finally:
+            self.timebank.end(is_request=True)
+
+    def decide(self, obs: Observation) -> Action:
         return Action.CHECK_CALL
 
     def hand_end(self, result: HandResult) -> None:
-        """Learn from a finished hand."""
-        self.hands_seen += 1
+        """Learn from a finished hand (timed, but rides along with a request)."""
+        self.timebank.begin()
+        try:
+            self.hands_seen += 1
+            self.learn(result)
+        finally:
+            self.timebank.end(is_request=False)
+
+    def learn(self, result: HandResult) -> None:
+        pass
 
 
 def get_brain(memory: dict, config: AgentConfig | None = None) -> Brain:
