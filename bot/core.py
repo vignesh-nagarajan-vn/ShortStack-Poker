@@ -8,6 +8,7 @@ stored in memory["brain"].
 from __future__ import annotations
 
 from game import Action, AgentConfig, HandResult, Observation
+from bot import fasteval, preflop  # noqa: F401  (load lookup tables at server startup)
 from bot.timebank import TimeBank
 
 BRAIN_KEY = "brain"
