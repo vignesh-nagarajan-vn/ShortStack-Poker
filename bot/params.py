@@ -24,12 +24,15 @@ DEFAULTS = {
     "agg_raise": 0.62,           # a raise
     "agg_reraise": 0.78,         # two or more raises
     "agg_prev_street": 0.08,     # extra per earlier postflop street they bet
+    "learn_preflop": 1.0,        # 1 = adapt preflop range floors to observed stats/showdowns
+    "learn_postflop": 0.0,       # 1 = adapt postflop aggression levels too (off: lost in ablation)
     # --- postflop: our actions ----------------------------------------
     "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
     "post_bet_eq_river": 0.63,
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.72,       # raise a bet
     "post_call_margin": 0.00,    # extra equity over pot odds to call
+    "barrel_weight": 0.6,        # how much future bets raise the price of a call (x aggression x streets left)
     # --- low stack-to-pot ratio (40 bb stacks get committed fast) -------
     "commit_ratio": 0.5,         # rest <= this x pot after calling = treat as all-in
     "commit_shove_eq": 0.55,     # when committed, shove instead of calling above this
