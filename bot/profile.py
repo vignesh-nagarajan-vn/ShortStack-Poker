@@ -73,6 +73,10 @@ def apply(base: dict, profile: str) -> dict:
     params = dict(base)
     for key, (op, value) in ADJUST.get(profile, {}).items():
         params[key] = params[key] + value if op == "add" else value
+    if profile == "maniac" and base["maniac_bet_eq"] > 0:
+        # Against a bot that raises everything, a medium-strength bet just
+        # gets raised off its hand: check those and let it bluff into us.
+        params["post_bet_eq"] = max(params["post_bet_eq"], base["maniac_bet_eq"])
     return params
 
 

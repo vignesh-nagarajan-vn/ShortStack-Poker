@@ -58,6 +58,7 @@ DEFAULTS = {
     # --- exploitation -----------------------------------------------------
     "exploit": 1.0,              # 1 = shift parameters by detected opponent profile (bot/profile.py)
     "maniac_max_ftb": 0.30,      # a "maniac" must also fold to bets less often than this (1.01 = any rate)
+    "maniac_bet_eq": 0.68,       # >0: against a maniac, bet when checked to only from this equity (A/B: barreler +0.41, random +0.34)
     "autopilot_steal": 1.0,      # 1 = raise every hand into an opponent stuck on check/fold
     "wild_hands": 0,             # first hands of a half that may be played at random (image play)...
     "wild_temp": 0.0,            # ...chance per decision of a random call or raise there
