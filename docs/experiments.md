@@ -276,6 +276,36 @@ Two trivial bots (calling stations) in the same setup were charged
 holds in containers. ShortStack's 5.5-6.4 s comes from the cheap 40-sample
 fallback, which runs until about 2.5 s of the bank is left by design.
 
+### Batch 9: per-street bet levels (idea from the Drew duplicate diff)
+
+Diffing the two halves deal by deal (same cards, seats swapped) against
+sdplo_v4, the biggest loss is deals where ShortStack folds to a flop or
+turn bet with both hands while Drew's bot holding the same cards plays on
+(about -4.2 bb per such deal). ShortStack folded to 73-79% of bets, Drew's
+bot to 44-50%. Drew's single bets, measured on all 8,000 hands of seeds
+1-4 (made-hand strength vs random hands):
+
+| Street | Drew bets first-in | 20th pct of bet strength | Bets below 0.40 | Level ShortStack used (learned) |
+|---|---|---|---|---|
+| flop | 39% | 0.22 | 31% | 0.29 |
+| turn | 41% (barrel 60%) | 0.18 | 38% | 0.32 |
+| river | 28% | **0.62** | 5% | 0.33 |
+
+One learned level for all streets was too tight on the flop and turn and
+far too loose on the river. `street_levels=1` refines the all-streets
+showdown estimate with that street's own showdowns.
+
+| Candidate | Pool (seeds 101-104) | Field | range_pro | range_aggro | brown | vs `x_drew_fast` (seeds 1-8) | Verdict |
+|---|---|---|---|---|---|---|---|
+| `street_levels=1` | **+0.108** (z 3.3) | +0.110 | +0.340 | +0.216 | -0.274 | +0.230 (se 0.124) | **KEEP** |
+| `barrel_weight=0.3` | +0.152 (z 4.4) | +0.259 | -0.156 | -0.102 | +0.090 | +0.017 (se 0.241) | not kept: hurts the closest bots |
+| both | +0.207 (z 5.9) | +0.323 | +0.128 | +0.016 | +0.177 | -0.138 (se 0.082) | not kept |
+
+Results against Drew's bot vary a lot because it reads the wall clock: the
+base arm scored -0.85 and -0.71 on the same seeds. `x_drew_fast` beats
+ShortStack by about 0.7-0.85 bb/deal in-process, so a Drew's bot that keeps
+its bank remains the hardest opponent.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,

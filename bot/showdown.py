@@ -33,6 +33,7 @@ class ShowdownLearner:
         self.raise_pcts: list[float] = []
         self.call_pcts: list[float] = []
         self.bet_strengths: list[float] = []
+        self.bet_by_street: dict[Street, list[float]] = {st: [] for st in BOARD_SIZE}
         self.raise_strengths: list[float] = []
         self.river_call_strengths: list[float] = []   # hands that called our river bets
 
@@ -60,7 +61,11 @@ class ShowdownLearner:
             if not acts:
                 continue
             strength = self.strength_percentile(opp_hole, board[:size])
-            (self.raise_strengths if len(acts) >= 2 else self.bet_strengths).append(strength)
+            if len(acts) >= 2:
+                self.raise_strengths.append(strength)
+            else:
+                self.bet_strengths.append(strength)
+                self.bet_by_street[street].append(strength)
 
     def add_river_call(self, opp_hole, board) -> None:
         """They called our river bet and showed this hand."""
@@ -84,8 +89,14 @@ class ShowdownLearner:
     def call_floor(self, prior: float) -> float:
         return self._blend(self.call_pcts, prior)
 
-    def bet_level(self, prior: float) -> float:
-        return self._blend(self.bet_strengths, prior)
+    def bet_level(self, prior: float, street: Street | None = None) -> float:
+        """Bottom of their single-bet range. With `street`, that street's
+        showdowns refine the all-streets estimate: a bot can semi-bluff the
+        flop and turn wide and still bet the river only for value."""
+        level = self._blend(self.bet_strengths, prior)
+        if street is None:
+            return level
+        return self._blend(self.bet_by_street[street], level)
 
     def raise_level(self, prior: float) -> float:
         return self._blend(self.raise_strengths, prior)

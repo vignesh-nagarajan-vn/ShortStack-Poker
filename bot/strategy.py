@@ -60,7 +60,8 @@ class Strategy:
         bet = p["agg_bet"]
         if p["learn_postflop"]:
             freq_level = min(0.85, max(0.10, 1.0 - agg.value))
-            bet = self.brain.showdowns.bet_level(self._blend(p["agg_bet"], freq_level, agg.total, 60.0))
+            bet = self.brain.showdowns.bet_level(self._blend(p["agg_bet"], freq_level, agg.total, 60.0),
+                                                 ctx.street if p["street_levels"] else None)
         if k == 0:
             level = 0.0
         elif not p["learn_postflop"]:
