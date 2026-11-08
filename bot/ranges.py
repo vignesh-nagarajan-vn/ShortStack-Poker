@@ -44,6 +44,51 @@ def made_strength(opp: np.ndarray, board) -> np.ndarray:
     return rank / max(1, len(opp) - 1)
 
 
+def action_weight(board, pre_floor: float, actions, softness: float = 0.12,
+                  draw_credit: float = 0.6, check_weight: float = 0.35):
+    """Opponent hands that fit every postflop action they took this hand,
+    each read through how often this opponent takes it in that spot.
+
+    `actions` is a list of (street, kind, freq):
+      ("bet", f)   they bet/raised; they do that f of the time there, so the
+                   hand sits in roughly their top f (made strength on that
+                   street's board, flush draws credited before the river)
+      ("call", q)  they called a bet they fold q of the time: above their
+                   fold line
+      ("check", f) they checked where they bet f of the time: slightly
+                   fewer strong hands (they may slow-play, so only
+                   `check_weight` of the bet filter is applied)
+    Every factor is soft and floored, so a misread never rules a hand out.
+    """
+    board = list(board)
+    if pre_floor <= 0 and not actions:
+        return None
+
+    def weight(opp: np.ndarray) -> np.ndarray:
+        w = np.ones(len(opp))
+        if pre_floor > 0:
+            pct = preflop.percentile_batch(opp)
+            w *= np.maximum(_sigmoid((pct - pre_floor) / 0.06), FLOOR_WEIGHT)
+        cache = {}
+        for street, kind, freq in actions:
+            if street not in cache:
+                b = board[:street + 2]
+                s = made_strength(opp, b)
+                if len(b) < 5 and draw_credit > 0:
+                    s = np.maximum(s, draw_credit * flush_draw(opp, b))
+                cache[street] = s
+            s = cache[street]
+            if kind == "bet":
+                w *= np.maximum(_sigmoid((s - (1.0 - freq)) / softness), 0.09)
+            elif kind == "call":
+                w *= np.maximum(_sigmoid((s - freq) / softness), 0.15)
+            else:
+                w *= 1.0 - check_weight * _sigmoid((s - (1.0 - freq)) / softness)
+        return w
+
+    return weight
+
+
 def postflop_weight(board, pre_floor: float, aggression: float, softness: float = 0.12,
                     draw_credit: float = 0.6):
     """Opponent hands that fit both their preflop line (percentile floor)

@@ -75,6 +75,13 @@ class OpponentModel:
     # How often they fold to our river bets, by size (a raise counts as no fold).
     river_fold_half: Rate = field(default_factory=lambda: Rate(0.30))
     river_fold_pot: Rate = field(default_factory=lambda: Rate(0.35))
+    # Per-spot postflop frequencies (index = street 1-3): how often they bet
+    # when nobody has bet this street, and how often they raise / fold when
+    # facing our bet. A bet at frequency f says "their top f", which is what
+    # the freq_ranges weighting (bot/ranges.py action_weight) reads.
+    spot_bet: dict = field(default_factory=lambda: {st: Rate(0.35) for st in (1, 2, 3)})
+    spot_raise: dict = field(default_factory=lambda: {st: Rate(0.12) for st in (1, 2, 3)})
+    spot_fold: dict = field(default_factory=lambda: {st: Rate(0.45) for st in (1, 2, 3)})
 
     # ---- feeding ---------------------------------------------------------
 
@@ -111,13 +118,18 @@ class OpponentModel:
             faced = [s for s in opp_pre if self._facing_raise(steps, s)]
             if faced:
                 r["three_bet"].add(any(s.action in RAISES for s in faced))
-        for s in steps:
+        for i, s in enumerate(steps):
             if s.is_me or s.street == Street.PREFLOP:
                 continue
             if s.action != Action.FOLD:
                 r["aggression"].add(s.action in RAISES)
+            st = int(s.street)
             if self._facing_raise(steps, s):
                 r["fold_to_bet"].add(s.action == Action.FOLD)
+                self.spot_raise[st].add(s.action in RAISES)
+                self.spot_fold[st].add(s.action == Action.FOLD)
+            elif not any(p.street == s.street and p.action in RAISES for p in steps[:i]):
+                self.spot_bet[st].add(s.action in RAISES)
         if any(s.street != Street.PREFLOP for s in steps) or result.went_to_showdown:
             r["wtsd"].add(result.went_to_showdown)
         self._river_folds(steps)

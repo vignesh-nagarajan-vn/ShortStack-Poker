@@ -119,10 +119,42 @@ class Strategy:
         return parts_equity(parts)
 
     def postflop_equity(self, ctx: Ctx, marks=()) -> float:
-        weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx),
-                                        self.opponent_aggression(ctx),
-                                        draw_credit=self.p["draw_credit"])
+        if self.p["freq_ranges"]:
+            weight = ranges.action_weight(ctx.obs.board, self.opponent_preflop_floor(ctx),
+                                          self.opponent_actions(ctx),
+                                          softness=self.p["freq_softness"],
+                                          draw_credit=self.p["draw_credit"],
+                                          check_weight=self.p["freq_check_weight"])
+        else:
+            weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx),
+                                            self.opponent_aggression(ctx),
+                                            draw_credit=self.p["draw_credit"])
         return self.estimate(ctx, weight, marks)
+
+    def opponent_actions(self, ctx: Ctx) -> list:
+        """The opponent's postflop actions this hand as (street, kind, freq),
+        each with how often this opponent takes that action in that spot."""
+        opp = self.brain.opponent
+        out, street, last_raiser = [], None, None
+        for a in ctx.obs.action_history:
+            st = int(a.street)
+            if st != street:
+                street, last_raiser = st, None
+            if st == 0:
+                continue
+            if not a.is_me:
+                facing = last_raiser == "me"
+                if a.action in RAISES:
+                    freq = (opp.spot_raise if facing else opp.spot_bet)[st].value
+                    out.append((st, "bet", freq))
+                elif a.action == Action.CHECK_CALL:
+                    if facing:
+                        out.append((st, "call", opp.spot_fold[st].value))
+                    else:
+                        out.append((st, "check", opp.spot_bet[st].value))
+            if a.action in RAISES:
+                last_raiser = "me" if a.is_me else "opp"
+        return out
 
     def postflop_marks(self, ctx: Ctx) -> list:
         """The equity thresholds postflop() compares against (no side effects)."""

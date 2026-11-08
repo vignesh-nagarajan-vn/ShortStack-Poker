@@ -28,6 +28,9 @@ DEFAULTS = {
     "agg_prev_adapt": 1.0,       # 1 = earlier-street bets add strength only as far as their betting is selective (A/B +0.12)
     "learn_postflop": 1.0,       # 1 = adapt postflop aggression levels too (A/B +0.14 bb/deal, 8 seeds)
     "street_levels": 1.0,        # 1 = learn their single-bet strength per street from showdowns (A/B +0.11)
+    "freq_ranges": 0.0,          # 1 = read each postflop action through their frequency in that spot (bot/ranges.py action_weight)
+    "freq_softness": 0.12,       # ...edge softness of each action's filter
+    "freq_check_weight": 0.35,   # ...how much a check thins out their strong hands
     # --- postflop: our actions ----------------------------------------
     "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
     "post_bet_eq_river": 0.63,
