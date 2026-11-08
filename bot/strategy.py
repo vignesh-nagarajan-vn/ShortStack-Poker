@@ -12,6 +12,9 @@ from game import Action, Street
 from bot import preflop, ranges
 from bot.draws import has_draw
 from bot.context import RAISES, Ctx
+from bot.equity import add_parts, parts_equity, parts_stderr
+
+ADAPT_MIN = 60     # smallest first-stage sample when sampling in two stages
 
 
 class Strategy:
@@ -83,18 +86,55 @@ class Strategy:
                 level = max(level, p["agg_bet"]) + p["agg_prev_street"] * len(earlier)
         return min(level, 0.9)
 
-    def postflop_equity(self, ctx: Ctx) -> float:
+    def estimate(self, ctx: Ctx, weight, marks) -> float:
+        """Equity for this decision, or -1 when out of thinking time.
+
+        With `adaptive_samples` on, a first stage of `adaptive_first` of the
+        samples is taken; the rest are only spent when that estimate lies
+        within `adaptive_z` standard errors of a threshold (`marks`) the
+        decision depends on. Clear spots then cost a fraction of the time,
+        and the time bank hands the savings to later decisions."""
         n = self.brain.samples(ctx)
         if n <= 0:
             return -1.0
+        hole, board, p = ctx.obs.hole_cards, ctx.obs.board, self.p
+        if not p["adaptive_samples"] or n < 2 * ADAPT_MIN:
+            return self.brain.equity(hole, board, n, weight)
+        first = max(ADAPT_MIN, int(n * p["adaptive_first"]))
+        parts = self.brain.equity_parts(hole, board, first, weight)
+        eq, se = parts_equity(parts), parts_stderr(parts)
+        if marks and min(abs(eq - m) for m in marks) < p["adaptive_z"] * se:
+            parts = add_parts(parts, self.brain.equity_parts(hole, board, n - first, weight))
+        return parts_equity(parts)
+
+    def postflop_equity(self, ctx: Ctx, marks=()) -> float:
         weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx),
                                         self.opponent_aggression(ctx),
                                         draw_credit=self.p["draw_credit"])
-        return self.brain.equity(ctx.obs.hole_cards, ctx.obs.board, n, weight)
+        return self.estimate(ctx, weight, marks)
+
+    def postflop_marks(self, ctx: Ctx) -> list:
+        """The equity thresholds postflop() compares against (no side effects)."""
+        p = self.p
+        if ctx.to_call > 0 and ctx.committed_after_call(p["commit_ratio"]):
+            return [p["commit_shove_eq"], ctx.allin_odds]
+        if ctx.to_call == 0:
+            if ctx.street == Street.RIVER:
+                bet_eq = p["post_bet_eq_river"] - self.thin_river_shift()
+            else:
+                bet_eq = p["post_bet_eq"]
+            if ctx.spr < p["low_spr"]:
+                bet_eq = min(bet_eq, p["low_spr_bet_eq"])
+            return [bet_eq, p["post_pot_size_eq"]]
+        raise_eq = p["post_raise_eq"]
+        if ctx.street == Street.RIVER and p["thin_river_raise"]:
+            raise_eq -= self.thin_river_shift()
+        bonus = self.brain.image.call_bonus(p, self.brain.profiler.profile, self.brain.opponent)
+        return [raise_eq, p["post_pot_size_eq"], self.call_odds(ctx) + p["post_call_margin"] - bonus]
 
     def postflop(self, ctx: Ctx) -> Action:
         p = self.p
-        eq = self.postflop_equity(ctx)
+        eq = self.postflop_equity(ctx, self.postflop_marks(ctx) if p["adaptive_samples"] else ())
         if eq < 0:                      # out of thinking time: free checks, cheap calls only
             return ctx.call() if ctx.to_call == 0 or ctx.pot_odds < 0.2 else ctx.fold()
         size = Action.RAISE_POT if eq >= p["post_pot_size_eq"] else Action.RAISE_HALF
@@ -277,13 +317,12 @@ class Strategy:
             return self.p["range_floor_call"]
         return self.brain.showdowns.call_floor(self.p["range_floor_call"])
 
-    def equity_vs_range(self, ctx: Ctx, floor: float) -> float:
-        hole = ctx.obs.hole_cards
-        n = self.brain.samples(ctx)
-        if n <= 0:
+    def equity_vs_range(self, ctx: Ctx, floor: float, marks=()) -> float:
+        eq = self.estimate(ctx, ranges.preflop_floor(floor), marks)
+        if eq < 0:
             # Out of time: approximate from the table (a tighter range costs equity).
-            return preflop.equity(hole) - 0.12 * floor
-        return self.brain.equity(hole, ctx.obs.board, n, ranges.preflop_floor(floor))
+            return preflop.equity(ctx.obs.hole_cards) - 0.12 * floor
+        return eq
 
     def preflop(self, ctx: Ctx) -> Action:
         p = self.p
@@ -307,12 +346,18 @@ class Strategy:
 
         # Facing one or more raises.
         floor = self.range_floor(opp_raises)
-        eq = self.equity_vs_range(ctx, floor)
+        margin = p["pre_call_margin_ip"] if ctx.in_position else p["pre_call_margin_oop"]
+        if not p["adaptive_samples"]:
+            marks = ()
+        elif ctx.committed_after_call(p["commit_ratio"]):
+            marks = (p["commit_shove_eq"], ctx.allin_odds)
+        else:
+            marks = (p["pre_reraise_equity"], ctx.pot_odds + margin)
+        eq = self.equity_vs_range(ctx, floor, marks)
         if ctx.committed_after_call(p["commit_ratio"]):
             return self.committed(ctx, eq)
         if eq >= p["pre_reraise_equity"] and ctx.can_raise:
             return ctx.raise_(Action.RAISE_POT)
-        margin = p["pre_call_margin_ip"] if ctx.in_position else p["pre_call_margin_oop"]
         if eq >= ctx.pot_odds + margin:
             return ctx.call()
         return ctx.fold()

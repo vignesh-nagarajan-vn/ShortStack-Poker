@@ -69,6 +69,9 @@ DEFAULTS = {
     # --- time and autopilot ----------------------------------------------
     "logic_share": 0.45,         # share of the 8 s bank our own code may spend
     "mc_max_samples": 1500,      # cap on Monte Carlo samples per decision
+    "adaptive_samples": 0.0,     # 1 = sample in two stages, finishing only near a threshold
+    "adaptive_first": 0.35,      # ...share of the samples in the first stage
+    "adaptive_z": 2.0,           # ...finish when within this many standard errors
     "pot_exponent": 0.0,         # >0: spend samples in proportion to pot^this (bot/timebank.py)
     "autopilot_streak": 10,      # default actions in a row that mean "out of time"
     "autopilot_min_folds": 4,    # ...including this many folds to a bet

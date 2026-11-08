@@ -59,6 +59,13 @@ class EquityEngine:
                weight_fn: Optional[WeightFn] = None) -> float:
         """Probability of winning at showdown (ties count half) against an
         opponent hand drawn at random, or weighted by weight_fn."""
+        return parts_equity(self.equity_parts(hole, board, n, weight_fn))
+
+    def equity_parts(self, hole: Sequence[int], board: Sequence[int], n: int,
+                     weight_fn: Optional[WeightFn] = None) -> tuple:
+        """(sum of weighted results, sum of weights, sum of squared weights).
+        Parts from separate calls add up, so an estimate can be topped up
+        with more samples later (see parts_equity / parts_stderr)."""
         n = max(1, int(n))
         hole = np.asarray(hole, dtype=np.intp)
         board = np.asarray(board, dtype=np.intp)
@@ -77,10 +84,28 @@ class EquityEngine:
             mine = mine_by_triple[triples].max(axis=1)
             theirs = fe.best_rank_batch(opp_pairs, triples)
         result = (mine > theirs).astype(np.float64) + 0.5 * (mine == theirs)
-        if weight_fn is None:
-            return float(result.mean())
-        w = np.asarray(weight_fn(opp), dtype=np.float64)
-        total = w.sum()
-        if not np.isfinite(total) or total <= 1e-9:
-            return float(result.mean())
-        return float((result * w).sum() / total)
+        if weight_fn is not None:
+            w = np.asarray(weight_fn(opp), dtype=np.float64)
+            total = w.sum()
+            if np.isfinite(total) and total > 1e-9:
+                return float((result * w).sum()), float(total), float((w * w).sum())
+        return float(result.sum()), float(n), float(n)
+
+
+def add_parts(a: tuple, b: tuple) -> tuple:
+    return a[0] + b[0], a[1] + b[1], a[2] + b[2]
+
+
+def parts_equity(parts: tuple) -> float:
+    return parts[0] / parts[1] if parts[1] > 0 else 0.5
+
+
+def parts_stderr(parts: tuple) -> float:
+    """Standard error of a (weighted) Monte Carlo equity estimate, using
+    the effective sample size (sum w)^2 / sum w^2."""
+    num, den, den2 = parts
+    if den <= 0 or den2 <= 0:
+        return 0.5
+    eq = num / den
+    n_eff = den * den / den2
+    return float(np.sqrt(max(eq * (1 - eq), 0.01) / max(1.0, n_eff)))

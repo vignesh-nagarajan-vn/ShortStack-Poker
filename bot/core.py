@@ -14,7 +14,7 @@ from game import Action, AgentConfig, HandResult, Observation
 from bot import fasteval, preflop  # noqa: F401  (load lookup tables at server startup)
 from bot import params as params_mod
 from bot.context import Ctx
-from bot.equity import EquityEngine
+from bot.equity import EquityEngine, parts_equity
 from bot.image import SelfImage
 from bot.opponent import RAISES, OpponentModel
 from bot.autopilot import AutopilotDetector
@@ -84,12 +84,15 @@ class Brain:
         return n
 
     def equity(self, hole, board, n: int, weight_fn=None) -> float:
+        return parts_equity(self.equity_parts(hole, board, n, weight_fn))
+
+    def equity_parts(self, hole, board, n: int, weight_fn=None) -> tuple:
         start = self.clock()
-        eq = self.engine.equity(hole, board, n, weight_fn)
+        parts = self.engine.equity_parts(hole, board, n, weight_fn)
         if hasattr(self.clock, "charge_samples"):
             self.clock.charge_samples(n)
         self.timebank.record_samples(n, self.clock() - start)
-        return eq
+        return parts
 
     # --- entry points --------------------------------------------------
 
