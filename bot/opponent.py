@@ -82,6 +82,9 @@ class OpponentModel:
     spot_bet: dict = field(default_factory=lambda: {st: Rate(0.35) for st in (1, 2, 3)})
     spot_raise: dict = field(default_factory=lambda: {st: Rate(0.12) for st in (1, 2, 3)})
     spot_fold: dict = field(default_factory=lambda: {st: Rate(0.45) for st in (1, 2, 3)})
+    # How often they fold when they bet and we raise them (flop/turn), for
+    # the adaptive raise-bluff (Strategy.raise_bluff).
+    fold_to_raise: dict = field(default_factory=lambda: {st: Rate(0.30) for st in (1, 2, 3)})
 
     # ---- feeding ---------------------------------------------------------
 
@@ -128,6 +131,10 @@ class OpponentModel:
                 r["fold_to_bet"].add(s.action == Action.FOLD)
                 self.spot_raise[st].add(s.action in RAISES)
                 self.spot_fold[st].add(s.action == Action.FOLD)
+                street_before = [p for p in steps[:i] if p.street == s.street]
+                if (len(street_before) >= 2 and street_before[-1].is_me
+                        and not street_before[-2].is_me and street_before[-2].action in RAISES):
+                    self.fold_to_raise[st].add(s.action == Action.FOLD)   # they bet, we raised
             elif not any(p.street == s.street and p.action in RAISES for p in steps[:i]):
                 self.spot_bet[st].add(s.action in RAISES)
         if any(s.street != Street.PREFLOP for s in steps) or result.went_to_showdown:

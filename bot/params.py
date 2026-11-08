@@ -79,6 +79,11 @@ DEFAULTS = {
     "river_bluff_adapt": 1.0,    # chance to bluff air when their measured river fold rate pays (A/B +0.08)
     "river_bluff_margin": 0.05,  # edge (in pots) the measured fold rate must clear
     "river_bluff_min_obs": 4,    # river bets they faced (per size) before trusting the rate (was 12)
+    "raise_bluff_adapt": 0.0,    # chance to raise (not fold) a flop/turn bet when their measured fold-to-raise pays
+    "raise_bluff_min_eq": 0.20,  # ...only with at least this much equity behind the raise
+    "raise_bluff_called_eq": 0.75,  # ...equity kept when called, as a share of eq vs their betting range
+    "raise_bluff_margin": 0.05,  # ...edge (in pots) the measured fold rate must clear
+    "raise_bluff_min_obs": 5,    # ...our raises of their bets seen on that street first
     # --- time and autopilot ----------------------------------------------
     "logic_share": 0.45,         # share of the 8 s bank our own code may spend
     "mc_max_samples": 1500,      # cap on Monte Carlo samples per decision

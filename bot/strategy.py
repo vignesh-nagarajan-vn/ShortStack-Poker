@@ -214,7 +214,36 @@ class Strategy:
             return ctx.raise_(Action.RAISE_POT)
         if eq >= self.call_bar(ctx):
             return ctx.call()
+        if ctx.can_raise and self.raise_bluff(ctx, eq):
+            return ctx.raise_(Action.RAISE_HALF)
         return ctx.fold()
+
+    def raise_bluff(self, ctx: Ctx, eq: float) -> bool:
+        """Raise instead of folding to a flop/turn bet when this opponent's
+        measured fold rate to our raises pays for it. A frequent bettor
+        (jish_4 bets 98% of flops) cannot hold most of those hands when
+        raised; one that never folds to raises never clears the bar. The
+        hand keeps some equity (`raise_bluff_min_eq`) for when it is
+        called, discounted because the calling range is stronger."""
+        p, opp, obs = self.p, self.brain.opponent, ctx.obs
+        if not p["raise_bluff_adapt"] or ctx.street == Street.RIVER or ctx.street == Street.PREFLOP:
+            return False
+        if ctx.opp_raises_this_street != 1 or eq < p["raise_bluff_min_eq"]:
+            return False
+        if any(a.is_me and a.street == ctx.street and a.action in RAISES for a in obs.action_history):
+            return False
+        rate = opp.fold_to_raise[int(ctx.street)]
+        if rate.total < p["raise_bluff_min_obs"] or Action.RAISE_HALF not in obs.raise_to:
+            return False
+        f = rate.value
+        raise_to = obs.raise_to[Action.RAISE_HALF]
+        invest = min(obs.my_stack, raise_to - obs.my_bet)
+        reply = max(0, min(obs.opp_stack, raise_to - obs.opp_bet))
+        called = p["raise_bluff_called_eq"] * eq * (ctx.pot + invest + reply) - invest
+        edge = (f * ctx.pot + (1 - f) * called) / max(1, ctx.pot)
+        if edge <= p["raise_bluff_margin"]:
+            return False
+        return self.brain.rng.random() < p["raise_bluff_adapt"] * self.brain.image.bluff_scale(p)
 
     def call_bar(self, ctx: Ctx) -> float:
         """Equity needed to call a postflop bet (when not committed)."""
