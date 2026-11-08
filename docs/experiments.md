@@ -763,6 +763,32 @@ aura-farmer, outliers, -0.9 to -1.15), more than any bot in part 1.
 AdityaVSM, RedRojoaka and zuhairrr07 (seed 3) emptied their time banks
 with six matches sharing the laptop. zuhairrr07 still won that seed.
 
+### Tighter big-blind calls against the field (build 6a67512)
+
+The field scan's losing and even bots are the kind that pay off when we
+call too wide preflop and fold too much after the flop (range-weighted
+Monte Carlo bots that size bets by our fold rate). Both tighter big-blind
+options went back on, judged against the scan's seeds 1-3 with the same
+runner (ports 7000+; the first attempt shared 6000-6011 with batch 2 and
+forfeited, so it was thrown away).
+
+| Batch 1, 10 closest bots | Mean bb/deal | Expected points |
+|---|---|---|
+| Defaults (scan) | -0.14 | 4.53 |
+| `pre_call_margin_oop=0.10` | -0.03 | 4.90 |
+| `bb_call_adapt=0.5` | -0.03 | 4.91 |
+
+Per bot, 0.10 vs the scan: ethereumethan +0.13, LaserRyan +0.17, FiWBot
++0.44, sahith +0.17, aurora +0.33, rangehunter +0.02, pokerMAKK +0.13,
+twostack +0.03, big-cheese -0.29, timecasters -0.03. The two options
+tie, but 0.10 already had Docker gains against jish_4 and PLO5-MCCFR, so
+it went to batch 2 (same seeds, 14 matches): +0.27 bb/deal on average
+(zuhairrr07 +0.42/+0.35, outliers +0.40/+0.10, dunlapjack +0.72/+0.65,
+Polaris +0.29/+0.54, malki-aal +0.95, Prunuus +0.16, rayha-m +0.12),
+with aura-farmer the one consistent loser (-0.33/-0.17) and
+100RandomHumans -0.45 in one seed. `pre_call_margin_oop=0.10` is now the
+default. Not yet confirmed in Docker against the new field.
+
 ## What to try next
 
 Done since the last list: PLO5-MCCFR and jish_4 diffs and Docker
