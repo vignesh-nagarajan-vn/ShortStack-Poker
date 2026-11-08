@@ -692,6 +692,45 @@ bots 0.00. Kept.
 The one chop is variance against always-pot (+1.43, CI -0.24 to +3.09).
 `tools/check_build.sh` passes on this build (14 MB over the base).
 
+### Field scan: 19 other teams' bots (build 7ab25b6)
+
+Each team's public repo (latest `main`), played through `judge_engine.py`
+over HTTP on the Windows host: fresh servers for both bots every half,
+seeds 1-3, 1,000 deals a half, six matches at once. P(win/chop/loss) is
+for one tournament match, from the three-seed mean and the per-match
+stderr (predicted mean ~ N(m, s² (1 + 1/3)), verdict by the 95% CI).
+We had 0 errors and used at most 5.7 s of the bank in any half.
+
+| Opponent (repo) | W/C/L | Mean | Per seed | P(win) | P(chop) | P(loss) | Exp. pts |
+|---|---|---|---|---|---|---|---|
+| EthereumEthan/plo-heads-up-agent | C L L | **-0.74** | +0.19, -1.07, -1.35 | 0% | 48% | 52% | 0.24 |
+| LaserRyan/Heads-Up-Poker | C C L | **-0.52** | -0.47, -0.23, -0.85 | 0% | 62% | 38% | 0.31 |
+| The007Programmer/AEY-TDatathon (FiWBot) | C C C | -0.39 | -0.45, -0.06, -0.67 | 1% | 79% | 20% | 0.40 |
+| SahithReddy-GitHub/poker-bot-tamu-datathon | C C C | -0.37 | -0.34, -0.44, -0.33 | 0% | 78% | 21% | 0.40 |
+| aurora-quantitative-group/Aurora-Poker-Bot | C C C | -0.36 | -0.53, -0.06, -0.49 | 1% | 79% | 21% | 0.40 |
+| Aditi6301/rangehunter | C C C | -0.17 | +0.14, -0.46, -0.19 | 2% | 90% | 8% | 0.47 |
+| karammasad/pokerMAKK | C C C | -0.01 | +0.39, -0.43, +0.01 | 4% | 91% | 5% | 0.50 |
+| ghodkeadityarao-tamu/twostack-poker-bot | C C C | +0.08 | +0.24, -0.34, +0.34 | 7% | 90% | 3% | 0.52 |
+| conorwang8/big-cheese-poker-bot | C C C | +0.45 | +0.59, +0.27, +0.50 | 24% | 75% | 0% | 0.62 |
+| andrewv426/timecasters-pokerbot | W C C | +0.62 | +1.23, +0.26, +0.36 | 42% | 58% | 0% | 0.71 |
+| shaswat-singh23/datathon-poker | W C W | +0.85 | +0.73, +0.46, +1.34 | 71% | 29% | 0% | 0.85 |
+| DiegoAC06/heads-up-green-fn | W W W | +0.93 | +1.42, +0.78, +0.58 | 86% | 14% | 0% | 0.93 |
+| Dhanush006/ssd-heads-up-poker | W W W | +1.19 | +1.36, +0.94, +1.28 | 89% | 11% | 0% | 0.94 |
+| dimi1729/2026_datathon_poker | W W W | +1.10 | +1.34, +0.92, +1.05 | 95% | 5% | 0% | 0.97 |
+| awojinrin/xplore-heads-up-poker-bot | W W W | +1.45 | +1.81, +1.34, +1.20 | 99% | 1% | 0% | 1.00 |
+| AllenChirayil/stallion-poker-bot | W W W | +1.46 | +1.47, +0.92, +1.99 | 100% | 0% | 0% | 1.00 |
+| Sploofie/f26-datathon-poker-bot (starter bot) | W W W | +1.50 | +1.50, +1.50, +1.50 | 100% | 0% | 0% | 1.00 |
+| abzf0/heads-up-dt26 | W W W | +1.93 | +2.56, +1.66, +1.56 | 100% | 0% | 0% | 1.00 |
+| shriharish1310/tamu-datathon-poker-bot | W W W | +2.17 | +2.37, +1.92, +2.23 | 100% | 0% | 0% | 1.00 |
+
+Expected total: **13.3 of 19 points** (31 W, 24 C, 3 L over 57 matches).
+abzf0, stallion, shaswat, shriharish and plo-heads-up-agent (seed 1)
+emptied their time banks in some halves with six matches sharing the
+laptop, so those margins aren't tournament-exact. plo-heads-up-agent's
+one non-negative seed was one of those, so it is likely a little
+stronger than shown. None of these are confirmed in Docker yet; the five
+negative ones are the ones worth confirming and diffing.
+
 ## What to try next
 
 Done since the last list: PLO5-MCCFR and jish_4 diffs and Docker
