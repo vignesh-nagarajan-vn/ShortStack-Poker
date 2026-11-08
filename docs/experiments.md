@@ -193,6 +193,36 @@ Extra samples have diminishing returns: cutting `logic_share` from 0.45 to
 0.35 cost 0.25 bb/deal (batch 6), but 1.8x more samples on top of the
 current budget adds only about 0.05.
 
+### Drew's sdplo_v4, measured (November 2026)
+
+Drew pushed sdplo_v4 (c0b0a6a) after the sdplo_v3 measurement above. Its
+commit says it makes the same decisions as v3 whenever time is not short,
+plus a fallback mode that uses the opponent model when the bank runs low.
+ShortStack here is d424b0c (the options added since 00cc8c3 are all off
+by default, so play is the same as 00cc8c3).
+
+| Measurement | ShortStack | Drew's bot |
+|---|---|---|
+| vs **sdplo_v3** (c011492), in-process, seeds 1-8 | **8 wins**, +1.29 bb/deal (+0.92 to +1.78) | |
+| vs **sdplo_v4**, in-process, seeds 1-8 | 0 wins, 5 chops, 3 losses, **-0.29**: +0.24, -0.67, -0.02, +0.20, +0.02, -0.93, -0.58, -0.59 | 6.5-7.6 s of 8 s, bank never empty |
+| vs **sdplo_v4**, real judge, fresh servers per half, seeds 21-24 | **2 wins, 2 chops**, +0.55: +0.72, +0.58, +0.43, +0.47 | **bank empty in all 8 halves** (89-424 calls skipped) |
+| Thinking time per half, real judge | 5.5-6.2 s, 0 errors | 8.0 s (wall 9.7-10.5 s) |
+
+* The in-process runs were 8 parallel processes on a 16-core laptop.
+  Both bots read the wall clock, so a single seed is noisy: seed 6 against
+  v4 gave -0.93 and then +0.37 on a rerun.
+* So v4 at full strength edges ShortStack, and sdplo_v3 was probably in
+  its weak fallback mode for much of the earlier in-process run. The
+  simulator charges 0.3 ms per request against about 0.45 ms on the real
+  judge, so v4 keeps its bank in-process and empties it on the real judge.
+* Our real-judge margin fell from +0.46 to +1.88 against v3 to +0.43 to
+  +0.72 against v4, and two of four matches chopped. If the tournament
+  machine is faster than this laptop, or Drew trims his time use, expect
+  chops or narrow losses.
+* On this laptop the judge cannot reach the bots through `localhost` (the
+  name lookup takes longer than the 2 s health-check timeout). Use
+  `--agent1 http://127.0.0.1:5008 --agent2 http://127.0.0.1:5009`.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
