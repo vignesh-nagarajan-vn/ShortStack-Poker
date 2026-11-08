@@ -496,6 +496,107 @@ without the best hand take the pot 65-81% of the time. ShortStack loses
 2.4 bb/deal in hands it folds after the flop and wins 1.3 in hands
 PLO5-MCCFR folds.
 
+### Docker match vs quad-j's jish_4 (build 33977a2)
+
+`ghcr.io/650joshlee/quad-j-jish:jish_4` (source:
+github.com/650JoshLee/quad-j-jish), same setup and seeds. ShortStack lost
+all four: -1.55, -1.84, -2.21, -2.04 (mean -1.91); a logged rerun gave
+-2.32, -1.24, -1.91, -1.47 (mean -1.73). 0 errors; both bots used 6-7 s.
+
+jish_4 is an equity bot like ours, but it reads every action through how
+often that opponent takes it in that exact spot (a bet made 40% of the
+time means the top ~40%), pot-raises the small blind with any hand above
+48% equity vs random, and bets 98% of flops when nobody has bet.
+
+| | ShortStack | jish_4 |
+|---|---|---|
+| SB first-in: fold / limp / raise | 8 / 53 / 39% | 3 / 36 / 61% (all pot) |
+| Bet when nobody has bet, flop / turn / river | 23 / 35 / 37% | 98 / 56 / 68% |
+| Fold to a flop / turn / river bet | 66 / 41 / 56% | 48 / 70 / 70% |
+| Those folds that gave up the best final hand | 37 / 33 / 41% | 10 / 11 / 12% |
+
+The diff charges -1.18 bb/deal to preflop (limping where it pot-raises:
+-0.61; half-raising where it pot-raises: -0.46) and -0.53 to the flop.
+Hands ShortStack folds on the flop cost -1.99 bb/deal.
+
+Our own profiler made it worse: jish_4's postflop aggression (0.80) puts
+it in the `maniac` profile 98% of the half, which drops our bluffs and
+raises the bar to bet, while jish_4 folds to our bets 30-55% of the time.
+
+### A sim loop against the real bots
+
+Both bots' code runs in-process (`PLO5_PATH`, `JISH_PATH` in
+`sim/pool.py`; PLO5-MCCFR copied out of its image, its C core needs
+Linux, so `sim.ab` runs inside the jish_4 image). A match takes ~19 s
+instead of ~70 s. ShortStack's baseline there: -1.44 vs jish_4 (Docker
+-1.7 to -1.9), -0.3 to -0.6 vs PLO5-MCCFR (Docker -0.8 to -0.9).
+
+**Noise.** PLO5-MCCFR, jish_4 and Drew's bot size their thinking by the
+wall clock, so the same match differs between runs: an A/A arm (identical
+play) measured +0.29 vs PLO5-MCCFR and -0.32 vs Drew's bot in one batch.
+The cached baseline is useless for them (`--no-cache` always), and only
+differences above ~0.3 mean anything against those two. jish_4 is close
+to deterministic in-process (A/A within 0.1).
+
+Running five container matches at once on the 16-CPU Docker VM emptied
+ShortStack's time bank in several halves (up to 76 decisions skipped):
+two at a time is the limit for honest container timing.
+
+**What PLO5-MCCFR is.** An MCCFR blueprint (fold, call, half, pot) over
+hand buckets, plus a model that switches to a trained counter-strategy
+when the opponent fits one of seven simple archetypes (station,
+loose-passive, over-folder, maniac, always-pot, always-half, random)
+with 90% confidence and passes an absolute fit test. ShortStack fits
+none, so it plays the blueprint against us.
+
+Sim A/B, seeds 101-116 (diff vs current defaults, bb/deal):
+
+| Candidate | jish_4 | PLO5-MCCFR | Notes |
+|---|---|---|---|
+| `freq_ranges=1` | -0.05 | -0.02 | neutral alone |
+| `defend_*` wider (agg 0, gain 0.6, cap 0.15, river) | -0.20 | -0.09 | calling more loses to jish_4 |
+| `sb_raise_half_above=0.35` | -0.06 | -0.14 | wider half-pot opens: no |
+| `sb_raise_pot_above=0.40` | 0.00 | +0.16 | |
+| `post_bet_eq=0.52, semi_bluff_freq=0.8` | +0.16 | noise | |
+| `exploit=0` | +0.23 to +0.29 | none (profile stays default) | |
+| combo: pot opens 0.40 + bet 0.52 + semi 0.8 + `freq_ranges` | +0.21 to +0.39 | noise | |
+| combo + `exploit=0` | **+0.78 to +0.95** (3 runs) | noise | |
+| combo + `maniac_max_ftb=0.30` | **+0.86** | noise | keeps the maniac mode for real maniacs |
+
+`maniac_max_ftb` calls an opponent a maniac only when its fold-to-bet is
+also low. Measured by our model: true maniacs and always-bettors stay
+below 0.20, barrelers below 0.32, jish_4 0.27-0.52. In the whole pool
+(seeds 101-104) combo + `maniac_max_ftb=0.30` gains on every close
+opponent (range_pro +0.43, range_aggro +0.24, mc_careful +0.50, mc_drain
++0.37, self-variants +0.2-0.5) and gives up chips only against bots it
+still beats by +2.9 to +8.7 (maniac -0.92, always-half -1.22, random
+-1.40, barreler -0.52): no match points change. With `exploit=0` instead
+the maniac loss doubles (-1.86).
+
+### Docker validation of the new defaults (seeds 11-18)
+
+Old defaults vs the combo (`sb_raise_pot_above=0.40, post_bet_eq=0.52,
+semi_bluff_freq=0.80, freq_ranges=1, maniac_max_ftb=0.30`), both arms
+played side by side (two matches at a time, the same load), 1 CPU each:
+
+| Opponent | Old bb/deal | New bb/deal | Diff (se) | Points of 8, old -> new |
+|---|---|---|---|---|
+| Drew's sdplo_v5 | +0.25 | **+0.71** | +0.46 (0.13) | 4.5 -> 6.5 |
+| Drew's sdplo_v4 | +0.16 | **+0.78** | +0.62 (0.14) | 4.0 -> 7.0 |
+| CsaBest's PLO5-MCCFR | -0.90 | **-0.54** | +0.36 (0.14) | 1.0 -> 3.0 |
+| quad-j's jish_4 | -1.95 | **-0.87** | +1.08 (0.17) | 0.0 -> 2.0 |
+
+9.5 -> 18.5 points over the 32 matches. Every empty time bank in these
+runs was Drew's bot; ShortStack used 5.8-6.3 s of 8 s with 0 errors.
+These are now the defaults.
+
+Cycle 1 in the sim on top of the new defaults (seeds 101-116; A/A
+moved up to 0.09): re-raising more preflop (`pre_reraise_equity=0.54`),
+raising bets more (`post_raise_eq=0.64`), minimum defense against
+PLO5-MCCFR (`defend_agg=0.30`), pot opens from 0.30, betting from 0.50
+with every draw. None moved any opponent by more than noise; the
+parameters are at a local optimum and the next gains need new behaviour.
+
 ## What to try next
 
 Done since the last list: the preflop re-tune (batch 8, nothing beat the
