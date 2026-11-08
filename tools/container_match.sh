@@ -17,6 +17,7 @@
 #
 # Results go to results/container/ (JSON per half and a log per match).
 # Options (environment variables): CPUS=1 MEMORY=4g DEALS=1000
+#     LOGS=1 (every hand in the half JSONs, for deal-by-deal diffs)
 #     JUDGE_IMAGE=poker-agent-base:local (any image with Python 3)
 
 set -uo pipefail
@@ -31,6 +32,8 @@ SEEDS=("${@:-1}")
 CPUS="${CPUS:-1}"
 MEMORY="${MEMORY:-4g}"
 DEALS="${DEALS:-1000}"
+LOG_ARGS=()
+[ "${LOGS:-0}" = 1 ] && LOG_ARGS=(--logs)
 JUDGE_IMAGE="${JUDGE_IMAGE:-poker-agent-base:local}"
 ROOT="$(pwd -W 2>/dev/null || pwd)"
 OUT="results/container"
@@ -65,7 +68,7 @@ for seed in "${SEEDS[@]}"; do
     echo "== seed $seed half $half" >> "$log"
     # The judge waits up to 15 s for both bots to answer GET /.
     judge --agent1 "http://botA-$$:5008" --agent2 "http://botB-$$:5009" \
-      --half "$half" --seed "$seed" --deals "$DEALS" --json "$OUT/${tag}_h$half.json" >> "$log" 2>&1
+      --half "$half" --seed "$seed" --deals "$DEALS" "${LOG_ARGS[@]}" --json "$OUT/${tag}_h$half.json" >> "$log" 2>&1
   done
   docker rm -f "botA-$$" "botB-$$" >/dev/null 2>&1
   echo "== combined" >> "$log"
