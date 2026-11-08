@@ -8,7 +8,7 @@ DEFAULTS = {
     # --- preflop: button (small blind) first action -------------------
     "sb_fold_below": 0.05,       # fold the worst hands instead of completing (tuned from 0.10)
     "sb_raise_half_above": 0.60, # open half-pot with these (tuned from 0.50)
-    "sb_raise_pot_above": 0.80,  # open pot with these
+    "sb_raise_pot_above": 0.40,  # open pot with these (was 0.80; with 0.40 the half-pot band is unused)
     # --- preflop: big blind after a limp -----------------------------
     "bb_raise_above": 0.70,
     # --- preflop: facing a raise ---------------------------------------
@@ -28,11 +28,11 @@ DEFAULTS = {
     "agg_prev_adapt": 1.0,       # 1 = earlier-street bets add strength only as far as their betting is selective (A/B +0.12)
     "learn_postflop": 1.0,       # 1 = adapt postflop aggression levels too (A/B +0.14 bb/deal, 8 seeds)
     "street_levels": 1.0,        # 1 = learn their single-bet strength per street from showdowns (A/B +0.11)
-    "freq_ranges": 0.0,          # 1 = read each postflop action through their frequency in that spot (bot/ranges.py action_weight)
+    "freq_ranges": 1.0,          # 1 = read each postflop action through their frequency in that spot (bot/ranges.py action_weight)
     "freq_softness": 0.12,       # ...edge softness of each action's filter
     "freq_check_weight": 0.35,   # ...how much a check thins out their strong hands
     # --- postflop: our actions ----------------------------------------
-    "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
+    "post_bet_eq": 0.52,         # equity vs their range to bet when checked to (was 0.60)
     "post_bet_eq_river": 0.63,
     "thin_river_shift": 0.10,    # max drop in the river bet threshold vs loose river callers
     "thin_river_from": 0.70,     # our called river bets winning this often starts the drop...
@@ -54,7 +54,7 @@ DEFAULTS = {
     "low_spr_bet_eq": 0.53,
     # --- exploitation -----------------------------------------------------
     "exploit": 1.0,              # 1 = shift parameters by detected opponent profile (bot/profile.py)
-    "maniac_max_ftb": 1.01,      # a "maniac" must also fold to bets less often than this (1.01 = any rate)
+    "maniac_max_ftb": 0.30,      # a "maniac" must also fold to bets less often than this (1.01 = any rate)
     "autopilot_steal": 1.0,      # 1 = raise every hand into an opponent stuck on check/fold
     "wild_hands": 0,             # first hands of a half that may be played at random (image play)...
     "wild_temp": 0.0,            # ...chance per decision of a random call or raise there
@@ -71,7 +71,7 @@ DEFAULTS = {
     # --- draws and bluffs ----------------------------------------------
     "draw_credit": 0.60,         # opponent flush draws count as this strong when they bet
     "semi_bluff_min_eq": 0.38,   # semi-bluff draws with at least this equity
-    "semi_bluff_freq": 0.50,     # how often we bet a qualifying draw when checked to
+    "semi_bluff_freq": 0.80,     # how often we bet a qualifying draw when checked to (was 0.50)
     "river_bluff_freq": 0.06,    # bet air on the river in position when checked to
     "river_bluff_max_eq": 0.25,
     "draw_raise": 0.0,           # chance to raise a bet with a real draw (flop/turn)...

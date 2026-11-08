@@ -27,9 +27,15 @@ def test_apply_adds_and_sets():
     assert abs(nit["sb_raise_half_above"] - (base["sb_raise_half_above"] - 0.25)) < 1e-9
 
 
+def test_frequent_bettor_that_folds_is_not_a_maniac():
+    # jish_4's shape: bets nearly every flop, folds to about half our bets.
+    assert classify(_model(aggression=0.8, fold_to_bet=0.45), maniac_max_ftb=0.30) != "maniac"
+    assert classify(_model(aggression=0.8, fold_to_bet=0.10), maniac_max_ftb=0.30) == "maniac"
+
+
 def test_needs_two_evaluations_to_switch():
     prof = Profiler(make())
-    m = _model(aggression=0.9)
+    m = _model(aggression=0.9, fold_to_bet=0.1)
     m.hands = 40
     assert not prof.update(m)
     m.hands = 60
