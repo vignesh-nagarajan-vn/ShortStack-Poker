@@ -31,6 +31,8 @@ Needs Docker; on Windows, run it from Git Bash.
 |---|---|
 | `python -m sim.run_match --a agent --b mc_basic --seeds 1 2` | In-process duplicate matches, scored like the judge |
 | `python -m sim.league --focus agent --seeds 1 2 3` | Our bot vs the whole pool in parallel, as a standings table |
+| `python -m sim.ab --cand "label:param=value" --seeds 101 102 103 104` | Paired A/B of parameter sets vs the baseline on the same seeds, with standard errors ([docs/experiments.md](docs/experiments.md)) |
+| `python -m sim.probe --opps brown barreler --seeds 1 2` | Per-opponent decision stats: fold-to-bet by street, folds that gave up the best hand, river bets called and won |
 | `python -m sim.tune --rounds 1` | Coordinate search over `bot/params.py` against the pool |
 | `python -m sim.bench` | Evaluator and equity timings |
 | `python tools/build_tables.py`, `python tools/build_preflop_table.py` | Rebuild the shipped data files |
@@ -47,4 +49,4 @@ Needs Docker; on Windows, run it from Git Bash.
 | `bot/opponent.py`, `bot/showdown.py` | Opponent statistics and ranges learned from showdowns |
 | `bot/profile.py`, `bot/autopilot.py`, `bot/image.py` | Profile exploits, autopilot stealing, self-image control |
 | `bot/timebank.py` | Time budgeting and adaptive sample counts |
-| `sim/` | Match runner, league, opponent pool, tuner, benchmark |
+| `sim/` | Match runner, league, opponent pool, A/B harness, probe, tuner, benchmark. Our bot runs on a deterministic virtual clock in the simulator (`sim.players.VirtualClock`); real timing is checked through the judge |
