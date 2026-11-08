@@ -140,8 +140,7 @@ class Strategy:
         raise_eq = p["post_raise_eq"]
         if ctx.street == Street.RIVER and p["thin_river_raise"]:
             raise_eq -= self.thin_river_shift()
-        bonus = self.brain.image.call_bonus(p, self.brain.profiler.profile, self.brain.opponent)
-        return [raise_eq, p["post_pot_size_eq"], self.call_odds(ctx) + p["post_call_margin"] - bonus]
+        return [raise_eq, p["post_pot_size_eq"], self.call_bar(ctx)]
 
     def postflop(self, ctx: Ctx) -> Action:
         p = self.p
@@ -181,10 +180,18 @@ class Strategy:
             return ctx.raise_(size)
         if ctx.can_raise and self.draw_raise(ctx, eq):
             return ctx.raise_(Action.RAISE_POT)
-        bonus = self.brain.image.call_bonus(p, self.brain.profiler.profile, self.brain.opponent)
-        if eq >= self.call_odds(ctx) + p["post_call_margin"] - bonus:
+        if eq >= self.call_bar(ctx):
             return ctx.call()
         return ctx.fold()
+
+    def call_bar(self, ctx: Ctx) -> float:
+        """Equity needed to call a postflop bet (when not committed)."""
+        p, image, opp = self.p, self.brain.image, self.brain.opponent
+        bonus = image.call_bonus(p, self.brain.profiler.profile, opp)
+        first_bet = ctx.opp_raises_this_street == 1 and not any(
+            a.is_me and a.street == ctx.street and a.action in RAISES for a in ctx.obs.action_history)
+        defend = image.defend_bonus(p, ctx.street, opp) if first_bet else 0.0
+        return self.call_odds(ctx) + p["post_call_margin"] - bonus - defend
 
     def thin_river_shift(self) -> float:
         """Lower the river value-bet bar when the opponent's river calls keep
