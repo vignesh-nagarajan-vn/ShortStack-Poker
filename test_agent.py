@@ -253,7 +253,7 @@ def test_time_budget_holds_on_a_slow_machine():
     import time as _time
     from bot.equity import EquityEngine
     from sim.players import BrainPlayer
-    from sim.run_match import play_half
+    from sim.run_match import REQUEST_OVERHEAD, play_half
     from sim.players import class_factory
     from sim.opponents import Maniac
 
@@ -269,13 +269,13 @@ def test_time_budget_holds_on_a_slow_machine():
 
     EquityEngine.equity = slow
     try:
-        out = play_half(lambda c: BrainPlayer(c), class_factory(Maniac, "maniac", raise_rate=1.0),
+        out = play_half(lambda c: BrainPlayer(c, virtual_time=False), class_factory(Maniac, "maniac", raise_rate=1.0),
                         "slow", 1, 1000)
     finally:
         EquityEngine.equity = real
     st = out.stats["A"]
     assert st.errors == 0
-    overhead = st.calls * 0.0006
+    overhead = st.calls * max(0.0, 0.0006 - REQUEST_OVERHEAD)   # play_half already charges some
     assert st.time_seconds + overhead < 6.5, f"{st.time_seconds:.2f}s thinking over {st.calls} calls"
 
 

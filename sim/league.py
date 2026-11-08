@@ -102,7 +102,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int)
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    bots = args.bots or sorted(registry())
+    bots = args.bots or sorted(n for n in registry() if not n.startswith("x_"))
     if args.focus and args.focus not in bots:
         bots.append(args.focus)
     start = time.perf_counter()

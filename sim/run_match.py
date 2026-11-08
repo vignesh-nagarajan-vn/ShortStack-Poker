@@ -24,6 +24,12 @@ from judge_engine import CHOP_Z, decide_verdict
 
 Factory = Callable[[AgentConfig], Player]
 
+# The real judge charges each request's wall time minus a 1 ms grace,
+# which includes FastAPI/JSON handling that in-process play skips. On a
+# dev laptop that is ~0.3 ms per request beyond the bot's own code, so
+# every in-process decision is charged this much extra.
+REQUEST_OVERHEAD = 0.0003
+
 
 @dataclass
 class SeatStats:
@@ -70,13 +76,14 @@ class MatchOutcome:
 def _safe_hand_end(player: Player, stats: SeatStats, result) -> None:
     if stats.forfeited:
         return
-    start = time.perf_counter()
+    clock = getattr(player, "clock", None) or time.perf_counter
+    start = clock()
     try:
         player.hand_end(result)
     except Exception as exc:  # counts as an error, like the judge
         stats.errors += 1
         stats.first_error = stats.first_error or f"hand_end: {type(exc).__name__}: {exc}"
-    stats.time_seconds += time.perf_counter() - start
+    stats.time_seconds += clock() - start
     if stats.errors >= ERROR_LIMIT:
         stats.forfeited = True
 
@@ -99,15 +106,16 @@ def play_half(make_a: Factory, make_b: Factory, seed, half: int, num_deals: int 
             obs = game.observation(seat)
             action = None
             if not st.forfeited and st.time_seconds < time_bank:
-                start = time.perf_counter()
+                clock = getattr(players[key], "clock", None) or time.perf_counter
+                start = clock()
                 try:
                     action = players[key].act(obs)
                 except Exception as exc:
                     st.errors += 1
                     st.first_error = st.first_error or f"act: {type(exc).__name__}: {exc}"
                     action = None
-                elapsed = time.perf_counter() - start
-                st.time_seconds += elapsed
+                elapsed = clock() - start
+                st.time_seconds += elapsed + REQUEST_OVERHEAD
                 st.calls += 1
                 if elapsed > 1.0:
                     st.errors += 1

@@ -33,9 +33,23 @@ def registry() -> dict:
         # Adaptive bots that model and exploit their opponent.
         "adaptive": (opp.AdaptiveExploiter, {}),
         "adaptive_loose": (opp.AdaptiveExploiter, {"raise_thr": 0.6, "bet_thr": 0.5, "bluff": 0.1}),
+        # A careful rival from the same family (clone of BrownBallers).
+        "brown": (opp.BrownClone, {}),
+        # Strong, fast, range-aware bots with balanced bluffs.
+        "range_pro": (opp.RangeBot, {}),
+        "range_aggro": (opp.RangeBot, {"bet_eq": 0.55, "raise_eq": 0.66, "bluff": 0.5,
+                                       "call_margin": -0.02, "agg_level": 0.35}),
+        # Bluff-heavy bettors that punish folding too much.
+        "barreler": (opp.Barreler, {"cbet": 0.7}),
+        "barreler_half": (opp.Barreler, {"cbet": 0.85, "half_size": True, "margin": -0.03}),
     }
     for name, (cls, kwargs) in simple.items():
         bots[name] = class_factory(cls, name, **kwargs)
+    # The real BrownBallers code, if a checkout sits next to this repo
+    # (or at $BROWN_PATH). Used to validate the clone; not in the default pool.
+    brown_path = os.environ.get("BROWN_PATH", os.path.join(os.path.dirname(ROOT), "heads-up-bot"))
+    if os.path.isfile(os.path.join(brown_path, "agent.py")):
+        bots["x_brown_real"] = _external_factory(brown_path, "x_brown_real")
     # Self-play: our own bot with features switched off, standing in for
     # earlier versions and for teams that build something close to us.
     for name, overrides in SELF_VARIANTS.items():
@@ -58,6 +72,15 @@ SELF_VARIANTS = {
     "self_tight": {"post_bet_eq": 0.65, "post_raise_eq": 0.78, "sb_fold_below": 0.25,
                    "pre_call_margin_oop": 0.06},
 }
+
+
+def _external_factory(repo: str, name: str):
+    """An agent.py from another repo, with that repo's packages importable.
+    Appended to sys.path so our game/evaluator (same organizer files) win."""
+    import sys
+    if repo not in sys.path:
+        sys.path.append(repo)
+    return module_factory(os.path.join(repo, "agent.py"), name)
 
 
 def resolve(name: str):

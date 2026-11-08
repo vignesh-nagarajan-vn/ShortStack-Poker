@@ -93,15 +93,48 @@ def agent_factory() -> Callable[[AgentConfig], Player]:
     return module_factory(os.path.join(ROOT, "agent.py"), "shortstack")
 
 
+class VirtualClock:
+    """A deterministic stand-in for perf_counter: every reading costs `tick`
+    seconds (so each timed decision costs about one tick) and each Monte
+    Carlo call costs `per_call` plus `per_sample` per sample (measured on
+    this laptop with range weights: 0.35 ms + 3.5 us per sample, padded
+    30% to match the real-clock bot's sample counts in full matches).
+    run_match charges a virtual-time player by this clock too, so a
+    machine stall can't empty its bank either. With it the bot's sample counts, and so
+    its decisions, no longer depend on machine load, and an A/A test of
+    identical parameters gives identical play. Defaults match this laptop:
+    about 3.5 s of thinking per half, as on the real judge."""
+
+    def __init__(self, tick: float = 0.0001, per_call: float = 0.00045,
+                 per_sample: float = 4.5e-6) -> None:
+        self.t = 0.0
+        self.tick, self.per_call, self.per_sample = tick, per_call, per_sample
+
+    def __call__(self) -> float:
+        self.t += self.tick
+        return self.t
+
+    def charge_samples(self, n: int) -> None:
+        self.t += self.per_call + n * self.per_sample
+
+
+# Set False (sim.ab --real-time) to time our bot with the real clock.
+VIRTUAL_TIME = True
+
+
 class BrainPlayer(Player):
     """Our bot built directly from bot.core.Brain with parameter overrides,
     wrapped in the same safety checks as agent.py. Used for self-play
-    (earlier versions, ablations) and for parameter tuning."""
+    (earlier versions, ablations) and for parameter tuning. Times itself
+    with a VirtualClock unless VIRTUAL_TIME is off."""
 
-    def __init__(self, config: AgentConfig, overrides: dict | None = None) -> None:
+    def __init__(self, config: AgentConfig, overrides: dict | None = None,
+                 virtual_time: bool | None = None) -> None:
         super().__init__(config)
         from bot.core import Brain
-        self.brain = Brain(config, overrides or {})
+        virtual = VIRTUAL_TIME if virtual_time is None else virtual_time
+        self.clock = VirtualClock() if virtual else None
+        self.brain = Brain(config, overrides or {}, clock=self.clock)
 
     def act(self, obs: Observation) -> Action:
         from bot.safety import ensure_legal, fallback_action
