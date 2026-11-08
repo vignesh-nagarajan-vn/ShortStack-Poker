@@ -36,6 +36,8 @@ class ShowdownLearner:
         self.bet_by_street: dict[Street, list[float]] = {st: [] for st in BOARD_SIZE}
         self.raise_strengths: list[float] = []
         self.river_call_strengths: list[float] = []   # hands that called our river bets
+        # Single postflop bets by size, to learn whether size tells strength.
+        self.bet_by_size: dict[Action, list[float]] = {Action.RAISE_HALF: [], Action.RAISE_POT: []}
 
     def strength_percentile(self, hole, board) -> float:
         """Made-hand strength of `hole` on `board` vs random hands."""
@@ -66,6 +68,7 @@ class ShowdownLearner:
             else:
                 self.bet_strengths.append(strength)
                 self.bet_by_street[street].append(strength)
+                self.bet_by_size[acts[0].action].append(strength)
 
     def add_river_call(self, opp_hole, board) -> None:
         """They called our river bet and showed this hand."""
@@ -97,6 +100,19 @@ class ShowdownLearner:
         if street is None:
             return level
         return self._blend(self.bet_by_street[street], level)
+
+    def size_tell(self, prior: float, prior_weight: float = 6.0) -> float:
+        """How much their bet size tracks strength, 0 (not at all) to 1: the
+        gap between the made strength they show after pot bets and after
+        half-pot bets, 0.2 of a percentile gap counting as a full tell.
+        Blended with `prior` by the smaller sample."""
+        half, pot = self.bet_by_size[Action.RAISE_HALF], self.bet_by_size[Action.RAISE_POT]
+        n = min(len(half), len(pot))
+        if n == 0:
+            return prior
+        gap = float(np.mean(pot)) - float(np.mean(half))
+        raw = min(1.0, max(0.0, gap / 0.2))
+        return (raw * n + prior * prior_weight) / (n + prior_weight)
 
     def raise_level(self, prior: float) -> float:
         return self._blend(self.raise_strengths, prior)

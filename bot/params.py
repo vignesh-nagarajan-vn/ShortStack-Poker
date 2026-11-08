@@ -34,6 +34,9 @@ DEFAULTS = {
     "freq_ranges": 1.0,          # 1 = read each postflop action through their frequency in that spot (bot/ranges.py action_weight)
     "freq_softness": 0.12,       # ...edge softness of each action's filter
     "freq_check_weight": 0.35,   # ...how much a check thins out their strong hands
+    "size_read": 1.0,            # 1 = read their bet size: pot bets narrower, half bets wider, as far as showdowns say size tracks strength
+    "size_tell_prior": 0.3,      # ...size-tells-strength (0-1) assumed before showdowns
+    "size_tell_weight": 6.0,     # ...pseudo-showdowns behind that prior
     # --- postflop: our actions ----------------------------------------
     "post_bet_eq": 0.52,         # equity vs their range to bet when checked to (was 0.60)
     "post_bet_eq_river": 0.63,
@@ -49,6 +52,9 @@ DEFAULTS = {
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.68,       # raise a bet (tuned from 0.72)
     "post_call_margin": 0.00,    # extra equity over pot odds to call
+    "ev_sizing": 1.0,            # 1 = pick half/pot value bets by one-street EV vs their fold rate to each size
+    "ev_size_min_obs": 6,        # ...bets of each size they faced on that street first
+    "ev_called_eq": 0.85,        # ...our equity when called, as a share of eq vs their range
     "barrel_weight": 0.6,        # how much future bets raise the price of a call (x aggression x streets left)
     # --- low stack-to-pot ratio (40 bb stacks get committed fast) -------
     "commit_ratio": 0.5,         # rest <= this x pot after calling = treat as all-in

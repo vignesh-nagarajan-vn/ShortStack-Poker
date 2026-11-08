@@ -134,7 +134,10 @@ class Strategy:
     def opponent_actions(self, ctx: Ctx) -> list:
         """The opponent's postflop actions this hand as (street, kind, freq),
         each with how often this opponent takes that action in that spot."""
-        opp = self.brain.opponent
+        opp, p = self.brain.opponent, self.p
+        tell = (self.brain.showdowns.size_tell(p["size_tell_prior"], p["size_tell_weight"])
+                if p["size_read"] else 0.0)
+        pot_share = opp.bet_pot_share.value
         out, street, last_raiser = [], None, None
         for a in ctx.obs.action_history:
             st = int(a.street)
@@ -146,6 +149,13 @@ class Strategy:
                 facing = last_raiser == "me"
                 if a.action in RAISES:
                     freq = (opp.spot_raise if facing else opp.spot_bet)[st].value
+                    if tell > 0:
+                        # With a size tell, pot bets are the top of the betting
+                        # range and half-pot bets the rest below it.
+                        if a.action == Action.RAISE_POT:
+                            freq *= 1.0 - tell * (1.0 - pot_share)
+                        else:
+                            freq = min(1.0, freq * (1.0 + 0.5 * tell * pot_share))
                     out.append((st, "bet", freq))
                 elif a.action == Action.CHECK_CALL:
                     if facing:
@@ -197,6 +207,8 @@ class Strategy:
                         return ctx.raise_(Action.RAISE_POT if verdict == 2 else Action.RAISE_HALF)
                     bet_eq = 2.0                 # their calling range beats us: no value bet
             if eq >= bet_eq and ctx.can_raise:
+                if ctx.spr >= p["low_spr"]:
+                    size = self.ev_size(ctx, eq, size)
                 return ctx.raise_(size)
             if ctx.can_raise and ctx.street == Street.RIVER:
                 bluff = self.river_bluff(ctx, eq)
@@ -217,6 +229,27 @@ class Strategy:
         if ctx.can_raise and self.raise_bluff(ctx, eq):
             return ctx.raise_(Action.RAISE_HALF)
         return ctx.fold()
+
+    def ev_size(self, ctx: Ctx, eq: float, default: Action) -> Action:
+        """Half pot or pot for a bet we have already decided to make, by
+        one-street EV against this opponent's measured fold rate to each
+        size on this street. Keeps `default` until both sizes have been
+        seen often enough."""
+        p, obs, opp = self.p, ctx.obs, self.brain.opponent
+        if not p["ev_sizing"]:
+            return default
+        st = int(ctx.street)
+        best, best_ev = default, None
+        for size in (Action.RAISE_HALF, Action.RAISE_POT):
+            rate = opp.fold_by_size[(st, size)]
+            if rate.total < p["ev_size_min_obs"] or size not in obs.raise_to:
+                return default
+            bet = max(0, min(obs.my_stack, obs.raise_to[size] - obs.my_bet))
+            f, called_eq = rate.value, p["ev_called_eq"] * eq
+            ev = f * ctx.pot + (1.0 - f) * (called_eq * (ctx.pot + 2 * bet) - bet)
+            if best_ev is None or ev > best_ev:
+                best, best_ev = size, ev
+        return best
 
     def raise_bluff(self, ctx: Ctx, eq: float) -> bool:
         """Raise instead of folding to a flop/turn bet when this opponent's

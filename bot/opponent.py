@@ -85,6 +85,12 @@ class OpponentModel:
     # How often they fold when they bet and we raise them (flop/turn), for
     # the adaptive raise-bluff (Strategy.raise_bluff).
     fold_to_raise: dict = field(default_factory=lambda: {st: Rate(0.30) for st in (1, 2, 3)})
+    # Share of their postflop bets/raises that are pot-sized (size read).
+    bet_pot_share: Rate = field(default_factory=lambda: Rate(0.5))
+    # How often they fold to our bets on each street, by size (EV sizing).
+    fold_by_size: dict = field(default_factory=lambda: {
+        (st, a): Rate(0.40 if a == Action.RAISE_HALF else 0.45)
+        for st in (1, 2, 3) for a in (Action.RAISE_HALF, Action.RAISE_POT)})
 
     # ---- feeding ---------------------------------------------------------
 
@@ -126,6 +132,8 @@ class OpponentModel:
                 continue
             if s.action != Action.FOLD:
                 r["aggression"].add(s.action in RAISES)
+            if s.action in RAISES:
+                self.bet_pot_share.add(s.action == Action.RAISE_POT)
             st = int(s.street)
             if self._facing_raise(steps, s):
                 r["fold_to_bet"].add(s.action == Action.FOLD)
@@ -140,6 +148,7 @@ class OpponentModel:
         if any(s.street != Street.PREFLOP for s in steps) or result.went_to_showdown:
             r["wtsd"].add(result.went_to_showdown)
         self._river_folds(steps)
+        self._size_folds(steps)
         if result.went_to_showdown and self._called_our_river_bet(steps):
             self.river_called_wins.add(result.winner == "me")
         if result.went_to_showdown and result.opp_hole:
@@ -165,6 +174,13 @@ class OpponentModel:
             if prev.is_me:
                 return prev.action in RAISES
         return False
+
+    def _size_folds(self, steps: list[Step]) -> None:
+        """Their answer to each of our postflop bets, by street and size."""
+        for mine, theirs in zip(steps, steps[1:]):
+            if (mine.is_me and mine.action in RAISES and not theirs.is_me
+                    and mine.street != Street.PREFLOP and theirs.street == mine.street):
+                self.fold_by_size[(int(mine.street), mine.action)].add(theirs.action == Action.FOLD)
 
     def _river_folds(self, steps: list[Step]) -> None:
         river = [s for s in steps if s.street == Street.RIVER]
