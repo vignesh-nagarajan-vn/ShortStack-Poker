@@ -67,9 +67,9 @@ DEFAULTS = {
     "river_bluff_max_eq": 0.25,
     "draw_raise": 0.0,           # chance to raise a bet with a real draw (flop/turn)...
     "draw_raise_agg": 0.0,       # ...when their postflop aggression rate is at least this
-    "river_bluff_adapt": 0.0,    # chance to bluff air when their measured river fold rate pays
+    "river_bluff_adapt": 1.0,    # chance to bluff air when their measured river fold rate pays (A/B +0.08)
     "river_bluff_margin": 0.05,  # edge (in pots) the measured fold rate must clear
-    "river_bluff_min_obs": 12,   # river bets they faced (per size) before trusting the rate
+    "river_bluff_min_obs": 4,    # river bets they faced (per size) before trusting the rate (was 12)
     # --- time and autopilot ----------------------------------------------
     "logic_share": 0.45,         # share of the 8 s bank our own code may spend
     "mc_max_samples": 1500,      # cap on Monte Carlo samples per decision

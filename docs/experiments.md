@@ -378,6 +378,27 @@ Needing 6 observed river bets per size instead of 12 lets it start early
 enough in the half to matter. It gains most against the strongest bots,
 which is where matches are close.
 
+### Batch 12: adaptive river bluffs on the `street_levels` base (seeds 121-128)
+
+Re-run after `street_levels=1` became the default, against 21 opponents
+including `x_drew_fast` (Drew's bot with a full time bank), with an A/A
+arm. With 840 matches the CPU was less loaded and only `x_drew_fast`,
+`x_brown_real` and `brown` moved in the A/A arm (+0.12, +0.07, +0.05).
+
+| Candidate | Deterministic 18 | Self variants | range_pro | range_aggro | x_brown_real | x_drew_fast | Worst det |
+|---|---|---|---|---|---|---|---|
+| A/A | 0.000 | 0.000 | 0.000 | 0.000 | +0.073 | +0.118 (se 0.137) | 0.000 |
+| `river_bluff_min_obs=6` | +0.055 (se 0.011) | +0.233 | +0.169 | +0.010 | +0.137 | +0.092 | -0.119 |
+| **`river_bluff_min_obs=4`** | **+0.075** (se 0.013) | **+0.282** | **+0.214** | **+0.153** | +0.015 | +0.128 | -0.143 |
+| `min_obs=6, margin=0.02` | +0.067 (se 0.012) | +0.232 | +0.307 | +0.015 | +0.159 | +0.084 | -0.035 |
+
+(all with `river_bluff_adapt=1`). **Kept: `river_bluff_adapt=1`,
+`river_bluff_min_obs=4`**, the best against the strongest bots. Against
+`x_drew_fast` every arm is within the A/A noise.
+
+The base lost to `x_drew_fast` by **-1.01 bb/deal** on these seeds: a Drew's
+bot that keeps its bank is the match ShortStack would lose.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
