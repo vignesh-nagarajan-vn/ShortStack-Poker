@@ -787,7 +787,15 @@ it went to batch 2 (same seeds, 14 matches): +0.27 bb/deal on average
 Polaris +0.29/+0.54, malki-aal +0.95, Prunuus +0.16, rayha-m +0.12),
 with aura-farmer the one consistent loser (-0.33/-0.17) and
 100RandomHumans -0.45 in one seed. `pre_call_margin_oop=0.10` is now the
-default. Not yet confirmed in Docker against the new field.
+default. Docker, seed 11, same image with the old value passed in:
+
+| Opponent | 0.03 (old) | 0.10 (new) | Diff |
+|---|---|---|---|
+| zuhairrr07/Poker-Bot | -1.23 (loss) | -0.99 (loss) | +0.24 |
+| Utsavdotcom/aura-farmer | -0.93 (loss) | -0.55 (chop) | +0.38 |
+
+0 errors, at most 5.6 s of the bank. One seed each, so more Docker seeds
+are still worth running before calling these matchups settled.
 
 ## What to try next
 
