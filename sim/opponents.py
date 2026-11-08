@@ -216,11 +216,8 @@ class WeakTight(Player):
         return _fold_or_check(obs)
 
 
-class BrownClone(Player):
-    """In-process clone of BrownBallers (github.com/snr2753423/heads-up-bot,
-    strategy/policy.py + strategy/opponent.py, Nov 2026), a rival we beat
-    10/10 on the real judge. It is the "MC equity vs one random hand"
-    family done carefully:
+class CarefulMc(Player):
+    """The "MC equity vs one random hand" family done carefully:
 
       * preflop: a 40-sample equity-vs-random table (noisy, so we add the
         same size of noise to our exact table)
@@ -228,9 +225,6 @@ class BrownClone(Player):
         the flop, 32 on the turn, 36 on the river (slow: drains the bank)
       * fixed thresholds (T below) shifted by a live model of our fold and
         raise rates and of the hands we show down
-
-    Its bundled profile library (identify.py) is left out: it only matches
-    starter/baseline bots, never us.
     """
 
     T = {"call_margin": 0.04, "facing_pot": 0.78, "facing_half": 0.68, "bet_pot": 0.72,

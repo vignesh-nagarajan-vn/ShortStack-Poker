@@ -1,6 +1,6 @@
 """Where do the chips come from? Decision statistics for our bot per opponent.
 
-    python -m sim.probe --opps brown barreler range_pro --seeds 1 2
+    python -m sim.probe --opps mc_careful barreler range_pro --seeds 1 2
     python -m sim.probe --set river_bluff_adapt=1 --opps nit
 
 Plays full duplicate matches with an instrumented BrainPlayer and prints,

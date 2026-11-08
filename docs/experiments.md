@@ -22,10 +22,9 @@ seeds before keeping.
 
 | Bot | What it models |
 |---|---|
-| `brown` | Clone of BrownBallers' `strategy/` (equity vs one random hand, 32 to 48 `omaha_score` samples, fixed thresholds shifted by a live fold/raise model). Validated against the real code in-process: ShortStack +2.07 bb/deal vs the clone, +1.96 vs the real bot (3 seeds), and both drain their bank. |
+| `mc_careful` | A careful MC-equity bot (equity vs one random hand, 32 to 48 `omaha_score` samples, fixed thresholds shifted by a live fold/raise model). Drains its bank. |
 | `range_pro`, `range_aggro` | Fast range-aware bots (our vectorised equity, ranges from their opponent's bets this hand, balanced bluffs), standing in for the strongest teams |
 | `barreler`, `barreler_half` | Bet 70 to 85% of the time when checked to, whatever they hold: punish over-folding |
-| `x_brown_real` | The real BrownBallers code, if a checkout sits next to this repo. Validation only, excluded from default runs |
 
 The simulator now also charges 0.3 ms per decision for the judge's HTTP and
 JSON overhead (measured on the real judge), so opponents drain their bank
@@ -72,7 +71,7 @@ checked separately through the judge.
 `learn_postflop` (the opponent's postflop bet range moves toward
 1 - their aggression rate, then toward their showdown hands) was switched off
 after an ablation against the old, weaker pool. Against the stronger pool it
-wins broadly: `range_pro` +0.35, `mc_basic` +0.36, `barreler` +0.20, `brown`
+wins broadly: `range_pro` +0.35, `mc_basic` +0.36, `barreler` +0.20, `mc_careful`
 +0.11. It is now the default (`self_learnpost` in the pool became
 `self_nolearnpost`).
 
@@ -82,10 +81,6 @@ wins broadly: `range_pro` +0.35, `mc_basic` +0.36, `barreler` +0.20, `brown`
 * League (`python -m sim.league --focus agent --seeds 1 2 3`, real clock):
   69-25-2 overall, +2.27 bb/deal; against the 22 non-self bots 65 wins,
   1 chop (`range_pro`), +3.28 bb/deal. Both losses are self-play variants.
-* Real judge vs the real BrownBallers code, tournament-style (fresh servers
-  each half): seed 11 +2.18 bb/deal (CI +1.53 to +2.83), seed 12 +2.37
-  (CI +1.73 to +3.01). ShortStack 3.55-3.97 s of 8 s, 0 errors;
-  BrownBallers emptied its bank in all four halves (251-336 calls skipped).
 * Slow machine: `test_time_budget_holds_on_a_slow_machine` (every equity call
   twice as slow, a full half against an always-raise bot, real clock) passes.
 * `./tools/check_build.sh`: passed, 0 MB added on top of the base image.
@@ -119,12 +114,12 @@ random hands was read as a top-44% hand by the river.
 | Head-to-head, real judge, fresh servers per half | **3 wins, 1 chop**: +1.22, +1.88, +1.38, +0.46 | ran out of time in 3 of 8 halves (41-173 calls skipped) |
 | Same 22-bot field, 3 seeds each | **65-1-0, +3.28** (before `agg_prev_adapt`); **66-0-0, +3.67** after | 58-4-4, +3.31; loses to `range_pro` 3/3 |
 | vs hyper-aggressive bots (always_half, maniac) | +5.1, +6.5 before; +7.0, +7.9 after | +11.9, +11.0 |
-| vs MC-threshold bots (mc_basic, brown, adaptive) | +3.1, +2.2, +3.1 | +1.2, +0.6, +1.8 |
+| vs MC-threshold bots (mc_basic, mc_careful, adaptive) | +3.1, +2.2, +3.1 | +1.2, +0.6, +1.8 |
 | Thinking time per half, real judge | 3.9-5.3 s | 5.7-8.0 s |
 
 The one transferable idea (read always-bettors as betting their range) is
 `agg_prev_adapt` above. Against Drew's bot itself it is neutral (-0.04,
-se 0.15, 8 seeds), and +0.15 against the real BrownBallers.
+se 0.15, 8 seeds).
 
 ### Batch 6: thinking budget
 
@@ -226,10 +221,10 @@ by default, so play is the same as 00cc8c3).
 ### Batch 8: threshold screen (seeds 101-104, 21 strong opponents)
 
 One change per arm against 21 opponents chosen for strength and variety
-(range_pro, range_aggro, brown, x_brown_real, x_drew_real, the MC bots,
+(range_pro, range_aggro, mc_careful, x_drew_real, the MC bots,
 adaptive bots, barrelers, nit, maniac, guide_example, random and four self
 variants). Columns: diff in bb/deal for the pool and the field, then
-against the three strongest bots. `x_drew_real` results are noise here:
+against the two strongest bots. `x_drew_real` results are noise here:
 it times itself on the real clock, and with 15 workers sharing the CPU its
 bank emptied in 4 of 8 base halves but rarely in the candidate arms, so
 every arm showed -0.2 to -1.4 against it (about -0.03 on each pool mean).
@@ -237,20 +232,20 @@ It is measured through Docker instead, and left out of later batches. Most arms 
 above the base, which points to an unlucky base run; the confirmation
 batch carries an A/A arm to measure this.
 
-| Candidate | Pool | Field | range_pro | range_aggro | x_brown_real | Next |
-|---|---|---|---|---|---|---|
-| `barrel_weight=0.4` | +0.184 | +0.222 | +0.011 | -0.124 | +0.021 | confirm |
-| `post_pot_size_eq=0.70` | +0.123 | +0.128 | +0.172 | +0.106 | +0.133 | confirm |
-| `sb_raise_pot_above=0.75` | +0.133 | +0.140 | -0.066 | +0.195 | +0.023 | confirm |
-| `post_bet_eq=0.63` | +0.125 | +0.134 | -0.055 | -0.017 | -0.195 | confirm |
-| `post_raise_eq=0.65` | +0.124 | +0.154 | -0.085 | -0.042 | -0.274 | confirm |
-| `sb_raise_half_above=0.55` | +0.120 | +0.141 | +0.180 | -0.167 | +0.175 | within the base offset |
-| `sb_raise_half_above=0.65`, `sb_fold_below=0.10`, `bb_raise_above=0.80`, `post_bet_eq=0.57` | +0.096 to +0.103 | | | | | within the base offset |
-| `adaptive_samples=1` (z 2 / z 1.5) | +0.059 / +0.065 | | -0.119 / -0.019 | -0.132 / -0.033 | | reject |
-| `pre_reraise_equity` 0.54 / 0.60, `pre_call_margin_oop` 0 / 0.06, `post_raise_eq=0.71`, `post_pot_size_eq=0.80`, `barrel_weight=0.8`, `bb_raise_above=0.60` | +0.01 to +0.07 | | | | | reject |
-| `river_value_range=1` with a 0.3 prior | **-0.198** | -0.246 | | | -0.441 | reject |
-| `draw_raise=0.5` | **-0.175** | -0.213 | | | -0.502 | reject |
-| `commit_shove_eq=0.50` | -0.102 | -0.131 | | | -0.604 | reject |
+| Candidate | Pool | Field | range_pro | range_aggro | Next |
+|---|---|---|---|---|---|
+| `barrel_weight=0.4` | +0.184 | +0.222 | +0.011 | -0.124 | confirm |
+| `post_pot_size_eq=0.70` | +0.123 | +0.128 | +0.172 | +0.106 | confirm |
+| `sb_raise_pot_above=0.75` | +0.133 | +0.140 | -0.066 | +0.195 | confirm |
+| `post_bet_eq=0.63` | +0.125 | +0.134 | -0.055 | -0.017 | confirm |
+| `post_raise_eq=0.65` | +0.124 | +0.154 | -0.085 | -0.042 | confirm |
+| `sb_raise_half_above=0.55` | +0.120 | +0.141 | +0.180 | -0.167 | within the base offset |
+| `sb_raise_half_above=0.65`, `sb_fold_below=0.10`, `bb_raise_above=0.80`, `post_bet_eq=0.57` | +0.096 to +0.103 | | | | within the base offset |
+| `adaptive_samples=1` (z 2 / z 1.5) | +0.059 / +0.065 | | -0.119 / -0.019 | -0.132 / -0.033 | reject |
+| `pre_reraise_equity` 0.54 / 0.60, `pre_call_margin_oop` 0 / 0.06, `post_raise_eq=0.71`, `post_pot_size_eq=0.80`, `barrel_weight=0.8`, `bb_raise_above=0.60` | +0.01 to +0.07 | | | | reject |
+| `river_value_range=1` with a 0.3 prior | **-0.198** | -0.246 | | | reject |
+| `draw_raise=0.5` | **-0.175** | -0.213 | | | reject |
+| `commit_shove_eq=0.50` | -0.102 | -0.131 | | | reject |
 
 ### Docker matches vs Drew's sdplo_v4 (tournament conditions)
 
@@ -295,7 +290,7 @@ One learned level for all streets was too tight on the flop and turn and
 far too loose on the river. `street_levels=1` refines the all-streets
 showdown estimate with that street's own showdowns.
 
-| Candidate | Pool (seeds 101-104) | Field | range_pro | range_aggro | brown | vs `x_drew_fast` (seeds 1-8) | Verdict |
+| Candidate | Pool (seeds 101-104) | Field | range_pro | range_aggro | mc_careful | vs `x_drew_fast` (seeds 1-8) | Verdict |
 |---|---|---|---|---|---|---|---|
 | `street_levels=1` | **+0.108** (z 3.3) | +0.110 | +0.340 | +0.216 | -0.274 | +0.230 (se 0.124) | **KEEP** |
 | `barrel_weight=0.3` | +0.152 (z 4.4) | +0.259 | -0.156 | -0.102 | +0.090 | +0.017 (se 0.241) | not kept: hurts the closest bots |
@@ -311,7 +306,7 @@ its bank remains the hardest opponent.
 Idea: play the first hands of a half at random (call or raise, never fold)
 so a learning opponent starts the half reading us as loose, then play
 normally. `wild_hands` = how many hands, `wild_temp` = chance per decision.
-Pool here = range_pro, range_aggro, brown, adaptive, adaptive_loose,
+Pool here = range_pro, range_aggro, mc_careful, adaptive, adaptive_loose,
 mc_basic, barreler, self_static, seeds 101-104; Drew = `x_drew_fast`,
 seeds 1-8.
 
@@ -332,11 +327,11 @@ confirmed.
 
 ### Batch 8 confirmation: `post_pot_size_eq=0.70` (seeds 105-108, whole pool)
 
-| Candidate | Pool | Field | range_pro | range_aggro | brown | Worst field | Verdict |
+| Candidate | Pool | Field | range_pro | range_aggro | mc_careful | Worst field | Verdict |
 |---|---|---|---|---|---|---|---|
 | `post_pot_size_eq=0.70` | +0.018 (z 0.5) | +0.021 | -0.200 | -0.183 | +0.219 | mc_loose -0.673 | **reject** |
 
-The screen's +0.12 to +0.17 against the three strongest bots did not
+The screen's +0.11 to +0.17 against the two strongest bots did not
 repeat on fresh seeds; it was most likely the unlucky base run batch 8
 suspected. Not run against Drew's bot, since it already fails on the
 closest pool bots.
@@ -347,7 +342,7 @@ closest pool bots.
 variants), 8 fresh seeds, plus an **A/A arm** with identical parameters.
 The A/A arm came out -0.054 (z -7.4): against bots that read the real
 clock the base itself moved by up to 0.6 bb/deal between two runs
-(`brown` -0.62, `mc_basic` -0.57, `x_brown_real` -0.30). The paired
+(`mc_careful` -0.62, `mc_basic` -0.57). The paired
 standard errors do not see this, so pool means against those bots are not
 trustworthy under a loaded CPU. The A/A arm's diff was exactly 0 against
 16 opponents (the baselines, `nit`, `maniac`, `weak_tight`,
@@ -355,20 +350,20 @@ trustworthy under a loaded CPU. The A/A arm's diff was exactly 0 against
 the four self variants), so candidates are scored on those
 ("deterministic"), with the noisier strong bots alongside.
 
-| Candidate | Deterministic 16 | Self variants | range_pro | range_aggro | x_brown_real | Verdict |
-|---|---|---|---|---|---|---|
-| A/A | 0.000 | 0.000 | +0.042 | -0.022 | -0.298 | noise floor |
-| `river_bluff_adapt=1, river_bluff_min_obs=6` | **+0.062** (se 0.012) | **+0.195** | **+0.307** | **+0.232** | +0.190 | **keep** (re-checked on the new base, below) |
-| `river_bluff_adapt=1` (12 observations) | +0.014 | +0.047 | +0.156 | +0.090 | +0.235 | weaker than 6 |
-| `barrel_weight=0.4` | +0.136 | -0.054 | -0.216 | +0.178 | +0.123 | reject: gains on weak bots only |
-| `barrel_weight=0.4, post_pot_size_eq=0.70` | +0.150 | -0.014 | +0.025 | +0.105 | +0.169 | reject: same pattern |
-| `post_call_margin=-0.02` | +0.044 | -0.100 | -0.231 | +0.103 | +0.178 | reject |
-| `post_bet_eq=0.63` | +0.021 | +0.006 | -0.144 | +0.161 | +0.185 | reject |
-| `agg_bet=0.35` | +0.021 | -0.020 | -0.006 | +0.120 | +0.055 | reject |
-| `river_bluff_freq=0.12` | -0.021 | -0.047 | -0.035 | +0.157 | +0.171 | reject |
-| `post_pot_size_eq=0.70` | -0.010 | -0.084 | -0.029 | +0.167 | -0.300 | reject |
-| `sb_raise_pot_above=0.75` | -0.051 | -0.051 | -0.072 | +0.193 | -0.434 | reject |
-| `post_raise_eq=0.65` | -0.113 | -0.213 | -0.037 | +0.422 | -0.360 | reject |
+| Candidate | Deterministic 16 | Self variants | range_pro | range_aggro | Verdict |
+|---|---|---|---|---|---|
+| A/A | 0.000 | 0.000 | +0.042 | -0.022 | noise floor |
+| `river_bluff_adapt=1, river_bluff_min_obs=6` | **+0.062** (se 0.012) | **+0.195** | **+0.307** | **+0.232** | **keep** (re-checked on the new base, below) |
+| `river_bluff_adapt=1` (12 observations) | +0.014 | +0.047 | +0.156 | +0.090 | weaker than 6 |
+| `barrel_weight=0.4` | +0.136 | -0.054 | -0.216 | +0.178 | reject: gains on weak bots only |
+| `barrel_weight=0.4, post_pot_size_eq=0.70` | +0.150 | -0.014 | +0.025 | +0.105 | reject: same pattern |
+| `post_call_margin=-0.02` | +0.044 | -0.100 | -0.231 | +0.103 | reject |
+| `post_bet_eq=0.63` | +0.021 | +0.006 | -0.144 | +0.161 | reject |
+| `agg_bet=0.35` | +0.021 | -0.020 | -0.006 | +0.120 | reject |
+| `river_bluff_freq=0.12` | -0.021 | -0.047 | -0.035 | +0.157 | reject |
+| `post_pot_size_eq=0.70` | -0.010 | -0.084 | -0.029 | +0.167 | reject |
+| `sb_raise_pot_above=0.75` | -0.051 | -0.051 | -0.072 | +0.193 | reject |
+| `post_raise_eq=0.65` | -0.113 | -0.213 | -0.037 | +0.422 | reject |
 
 Adaptive river bluffs answer the leak `sim.probe` showed: range_pro folds
 77% of the time to our river bets, yet ShortStack bluffed almost never
@@ -382,15 +377,15 @@ which is where matches are close.
 
 Re-run after `street_levels=1` became the default, against 21 opponents
 including `x_drew_fast` (Drew's bot with a full time bank), with an A/A
-arm. With 840 matches the CPU was less loaded and only `x_drew_fast`,
-`x_brown_real` and `brown` moved in the A/A arm (+0.12, +0.07, +0.05).
+arm. With 840 matches the CPU was less loaded and only `x_drew_fast`
+and `mc_careful` moved in the A/A arm (+0.12, +0.05).
 
-| Candidate | Deterministic 18 | Self variants | range_pro | range_aggro | x_brown_real | x_drew_fast | Worst det |
-|---|---|---|---|---|---|---|---|
-| A/A | 0.000 | 0.000 | 0.000 | 0.000 | +0.073 | +0.118 (se 0.137) | 0.000 |
-| `river_bluff_min_obs=6` | +0.055 (se 0.011) | +0.233 | +0.169 | +0.010 | +0.137 | +0.092 | -0.119 |
-| **`river_bluff_min_obs=4`** | **+0.075** (se 0.013) | **+0.282** | **+0.214** | **+0.153** | +0.015 | +0.128 | -0.143 |
-| `min_obs=6, margin=0.02` | +0.067 (se 0.012) | +0.232 | +0.307 | +0.015 | +0.159 | +0.084 | -0.035 |
+| Candidate | Deterministic 18 | Self variants | range_pro | range_aggro | x_drew_fast | Worst det |
+|---|---|---|---|---|---|---|
+| A/A | 0.000 | 0.000 | 0.000 | 0.000 | +0.118 (se 0.137) | 0.000 |
+| `river_bluff_min_obs=6` | +0.055 (se 0.011) | +0.233 | +0.169 | +0.010 | +0.092 | -0.119 |
+| **`river_bluff_min_obs=4`** | **+0.075** (se 0.013) | **+0.282** | **+0.214** | **+0.153** | +0.128 | -0.143 |
+| `min_obs=6, margin=0.02` | +0.067 (se 0.012) | +0.232 | +0.307 | +0.015 | +0.084 | -0.035 |
 
 (all with `river_bluff_adapt=1`). **Kept: `river_bluff_adapt=1`,
 `river_bluff_min_obs=4`**, the best against the strongest bots. Against
@@ -406,17 +401,16 @@ bot that keeps its bank is the match ShortStack would lose.
 folds gave up the best hand (about 10,900 bb of pots). `defend_gain` lowers
 the call threshold while our fold rate to their first bet on a street is
 above `defend_target`, against bots with postflop aggression of at least
-0.40. 22 opponents, A/A arm; only `x_drew_fast` (+0.18) and `x_brown_real`
-(-0.11) moved in the A/A arm.
+0.40. 22 opponents, A/A arm; only `x_drew_fast` (+0.18) moved in the A/A arm.
 
-| Candidate | Deterministic 20 | Self variants | range_aggro | x_brown_real | barreler | x_drew_fast | Worst det |
-|---|---|---|---|---|---|---|---|
-| A/A | 0.000 | 0.000 | 0.000 | -0.112 | 0.000 | +0.183 (se 0.112) | 0.000 |
-| **`defend_gain=0.3`** | **+0.087** (se 0.029) | +0.052 | +0.114 | -0.073 | -0.098 | -0.131 (se 0.142) | always_half -0.146 |
-| `defend_gain=0.5` | +0.052 | -0.022 | +0.190 | +0.029 | -0.148 | +0.008 | mc_loose -0.191 |
-| `0.5, target 0.50` | +0.061 | +0.024 | +0.088 | -0.210 | -0.161 | -0.009 | barreler -0.161 |
-| `0.5` with the river | +0.088 | +0.044 | +0.177 | -0.112 | -0.166 | -0.015 | barreler -0.166 |
-| `0.8, cap 0.15` | +0.047 | +0.044 | +0.176 | -0.239 | -0.086 | +0.006 | mc_loose -0.414 |
+| Candidate | Deterministic 20 | Self variants | range_aggro | barreler | x_drew_fast | Worst det |
+|---|---|---|---|---|---|---|
+| A/A | 0.000 | 0.000 | 0.000 | 0.000 | +0.183 (se 0.112) | 0.000 |
+| **`defend_gain=0.3`** | **+0.087** (se 0.029) | +0.052 | +0.114 | -0.098 | -0.131 (se 0.142) | always_half -0.146 |
+| `defend_gain=0.5` | +0.052 | -0.022 | +0.190 | -0.148 | +0.008 | mc_loose -0.191 |
+| `0.5, target 0.50` | +0.061 | +0.024 | +0.088 | -0.161 | -0.009 | barreler -0.161 |
+| `0.5` with the river | +0.088 | +0.044 | +0.177 | -0.166 | -0.015 | barreler -0.166 |
+| `0.8, cap 0.15` | +0.047 | +0.044 | +0.176 | -0.086 | +0.006 | mc_loose -0.414 |
 
 range_pro is unchanged in every arm: its aggression is under 0.40, so the
 rule never fires. **Kept `defend_gain=0.3`**: it passes the keep rule
@@ -460,7 +454,7 @@ current thresholds), `river_value_range` with a looser prior and
   option (`defend_gain`) is the first answer being tested; bet sizing and
   check-raising against its flop bets are the next.
 * Judge A/B results on the opponents where the A/A arm is exactly 0, and
-  run batches against real-clock bots (`x_drew_*`, `brown`) with fewer
+  run batches against real-clock bots (`x_drew_*`, `mc_careful`) with fewer
   workers, or through Docker.
 * Make `adaptive_loose` stop losing to `learn_postflop` (the one consistent
   negative).

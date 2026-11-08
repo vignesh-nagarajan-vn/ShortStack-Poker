@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "docs", "images", "league.png")
-LABELS = {"brown": "BrownBallers clone", "guide_example": "guide example bot"}
+LABELS = {"guide_example": "guide example bot"}
 BAR, TEXT, MUTED, GRID, BG = "#2b7bd9", "#111111", "#555555", "#e6e6e6", "#fbfbfa"
 
 

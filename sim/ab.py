@@ -2,7 +2,7 @@
 
     python -m sim.ab --cand thin_river_shift=0.2 --seeds 1 2 3 4
     python -m sim.ab --cand big:thin_river_shift=0.2 --cand small:thin_river_shift=0.15
-    python -m sim.ab --cand x=1 --base learn_postflop=1 --opps mc_basic brown
+    python -m sim.ab --cand x=1 --base learn_postflop=1 --opps mc_basic mc_careful
 
 Every arm is our bot (BrainPlayer, safety wrapper included) with parameter
 overrides. Each arm plays every opponent in the pool on the same seeds, so

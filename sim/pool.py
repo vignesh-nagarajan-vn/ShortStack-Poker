@@ -34,8 +34,8 @@ def registry() -> dict:
         # Adaptive bots that model and exploit their opponent.
         "adaptive": (opp.AdaptiveExploiter, {}),
         "adaptive_loose": (opp.AdaptiveExploiter, {"raise_thr": 0.6, "bet_thr": 0.5, "bluff": 0.1}),
-        # A careful rival from the same family (clone of BrownBallers).
-        "brown": (opp.BrownClone, {}),
+        # A careful bot from the same family with a live opponent model.
+        "mc_careful": (opp.CarefulMc, {}),
         # Strong, fast, range-aware bots with balanced bluffs.
         "range_pro": (opp.RangeBot, {}),
         "range_aggro": (opp.RangeBot, {"bet_eq": 0.55, "raise_eq": 0.66, "bluff": 0.5,
@@ -46,12 +46,8 @@ def registry() -> dict:
     }
     for name, (cls, kwargs) in simple.items():
         bots[name] = class_factory(cls, name, **kwargs)
-    # The real BrownBallers code, if a checkout sits next to this repo
-    # (or at $BROWN_PATH). Used to validate the clone; not in the default pool.
-    brown_path = os.environ.get("BROWN_PATH", os.path.join(os.path.dirname(ROOT), "heads-up-bot"))
-    if os.path.isfile(os.path.join(brown_path, "agent.py")):
-        bots["x_brown_real"] = _external_factory(brown_path, "x_brown_real")
-    # Drew's sdplo bot (github.com/burnerdrew2-prog/tamu-heads-up-bot), same idea.
+    # Drew's sdplo bot (github.com/burnerdrew2-prog/tamu-heads-up-bot), if a
+    # checkout sits next to this repo (or at $DREW_PATH). Not in the default pool.
     drew_path = os.environ.get("DREW_PATH", os.path.join(os.path.dirname(ROOT), "tamu-heads-up-bot"))
     if os.path.isfile(os.path.join(drew_path, "agent.py")):
         bots["x_drew_real"] = _external_factory(drew_path, "x_drew_real")
