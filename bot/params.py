@@ -52,6 +52,8 @@ DEFAULTS = {
     # --- exploitation -----------------------------------------------------
     "exploit": 1.0,              # 1 = shift parameters by detected opponent profile (bot/profile.py)
     "autopilot_steal": 1.0,      # 1 = raise every hand into an opponent stuck on check/fold
+    "wild_hands": 0,             # first hands of a half that may be played at random (image play)...
+    "wild_temp": 0.0,            # ...chance per decision of a random call or raise there
     # --- our own image (bot/image.py) ----------------------------------
     "image_ftb_cap": 0.50,       # keep our fold-to-bet below adaptive bots' bluff trigger
     "image_call_bonus": 0.04,    # equity we give up on marginal calls while above it...

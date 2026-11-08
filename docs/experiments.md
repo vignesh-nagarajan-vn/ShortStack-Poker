@@ -306,6 +306,30 @@ base arm scored -0.85 and -0.71 on the same seeds. `x_drew_fast` beats
 ShortStack by about 0.7-0.85 bb/deal in-process, so a Drew's bot that keeps
 its bank remains the hardest opponent.
 
+### Batch 10: wild opening (image play)
+
+Idea: play the first hands of a half at random (call or raise, never fold)
+so a learning opponent starts the half reading us as loose, then play
+normally. `wild_hands` = how many hands, `wild_temp` = chance per decision.
+Pool here = range_pro, range_aggro, brown, adaptive, adaptive_loose,
+mc_basic, barreler, self_static, seeds 101-104; Drew = `x_drew_fast`,
+seeds 1-8.
+
+| Candidate | Pool | range_pro | range_aggro | vs `x_drew_fast` |
+|---|---|---|---|---|
+| 50 hands, 0.5 | **-0.402** (z -4.9) | -0.430 | -0.355 | **+0.379** (se 0.109) |
+| 50 hands, 1.0 | -0.497 | -0.513 | -0.977 | |
+| 20 hands, 0.5 | -0.026 | -0.198 | -0.265 | +0.049 (se 0.130) |
+| 50 hands, 0.2 | -0.143 | -0.267 | -0.112 | +0.339 (se 0.119) |
+
+It throws Drew's Bayesian model off (his ranges for us stay too wide
+for the rest of the half), but every dose costs about as much against
+range_pro, and even the adaptive bots it is meant to fool beat it. It
+also only pays when Drew's bot keeps its bank; when it empties its bank
+(Docker on 1 CPU) the wild hands are pure cost. Left off (the default).
+Worth a recheck with more Drew seeds if a fast tournament machine is
+confirmed.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,

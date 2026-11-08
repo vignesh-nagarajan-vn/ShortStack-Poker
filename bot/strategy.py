@@ -31,9 +31,19 @@ class Strategy:
                 auto.woke_up()          # they called or raised: back to normal play
             elif ctx.can_raise and self.p["autopilot_steal"]:
                 return ctx.raise_(Action.RAISE_HALF)
+        if ctx.obs.hand_index < self.p["wild_hands"] and self.brain.rng.random() < self.p["wild_temp"]:
+            return self.wild(ctx)
         if ctx.street == Street.PREFLOP:
             return self.preflop(ctx)
         return self.postflop(ctx)
+
+    def wild(self, ctx: Ctx) -> Action:
+        """Image play for the first hands: call or raise at random, never
+        fold, so a learning opponent starts the half reading us as loose."""
+        options = [ctx.call()]
+        if ctx.can_raise:
+            options += [ctx.raise_(Action.RAISE_HALF), ctx.raise_(Action.RAISE_POT)]
+        return self.brain.rng.choice(options)
 
     # ------------------------------------------------------------------
     def opponent_preflop_floor(self, ctx: Ctx) -> float:
