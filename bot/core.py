@@ -7,6 +7,8 @@ stored in memory["brain"].
 
 from __future__ import annotations
 
+import json
+import os
 import random
 import time
 
@@ -25,8 +27,9 @@ from bot.timebank import FALLBACK_HEADROOM, PROBE_EVERY, TimeBank
 
 BRAIN_KEY = "brain"
 
-# Optional parameter overrides, set by the offline tuner before a half starts.
-PARAM_OVERRIDES: dict = {}
+# Optional parameter overrides, set by the offline tuner before a half starts,
+# or as JSON in SHORTSTACK_PARAMS for container tests (never set in the tournament).
+PARAM_OVERRIDES: dict = json.loads(os.environ.get("SHORTSTACK_PARAMS") or "{}")
 
 
 class Brain:

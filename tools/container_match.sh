@@ -18,13 +18,16 @@
 # Results go to results/container/ (JSON per half and a log per match).
 # Options (environment variables): CPUS=1 MEMORY=4g DEALS=1000
 #     LOGS=1 (every hand in the half JSONs, for deal-by-deal diffs)
+#     ENV_A / ENV_B="KEY=VALUE ..." (environment for that bot, values without
+#       spaces), e.g. ENV_A='SHORTSTACK_PARAMS={"defend_agg":0.3}'
+#     TAG=name (added to the result file names, to keep candidates apart)
 #     JUDGE_IMAGE=poker-agent-base:local (any image with Python 3)
 
 set -uo pipefail
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
 if [ $# -lt 2 ]; then
-  sed -n '3,20p' "$0"
+  sed -n '3,25p' "$0"
   exit 2
 fi
 A="$1"; B="$2"; shift 2
@@ -47,8 +50,10 @@ cleanup() {
 trap cleanup EXIT
 docker network create "$NET" >/dev/null || exit 1
 
-start_bot() {   # name image port
-  docker run --detach --name "$1" --network "$NET" \
+start_bot() {   # name image port env
+  local envs=() kv
+  for kv in $4; do envs+=(--env "$kv"); done
+  docker run --detach --name "$1" --network "$NET" "${envs[@]}" \
     --read-only --tmpfs /tmp:rw,nosuid,nodev,size=512m \
     --cpus "$CPUS" --memory "$MEMORY" --env PORT="$3" "$2" >/dev/null
 }
@@ -59,12 +64,12 @@ judge() {       # judge_engine.py arguments...
 }
 
 for seed in "${SEEDS[@]}"; do
-  tag="$(echo "${A}_vs_${B}" | tr '/:' '__')_s${seed}"
+  tag="$(echo "${A}_vs_${B}" | tr '/:' '__')${TAG:+_$TAG}_s${seed}"
   log="$OUT/$tag.log"
   : > "$log"
   for half in 1 2; do
     docker rm -f "botA-$$" "botB-$$" >/dev/null 2>&1
-    start_bot "botA-$$" "$A" 5008 && start_bot "botB-$$" "$B" 5009 || exit 1
+    start_bot "botA-$$" "$A" 5008 "${ENV_A:-}" && start_bot "botB-$$" "$B" 5009 "${ENV_B:-}" || exit 1
     echo "== seed $seed half $half" >> "$log"
     # The judge waits up to 15 s for both bots to answer GET /.
     judge --agent1 "http://botA-$$:5008" --agent2 "http://botB-$$:5009" \
