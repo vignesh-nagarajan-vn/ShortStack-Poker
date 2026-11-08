@@ -201,7 +201,7 @@ class Strategy:
         n = self.brain.samples(ctx)
         if n <= 0:
             return None
-        floor = sd.river_call_floor()
+        floor = sd.river_call_floor(prior=p["river_call_prior"])
         weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx), floor,
                                         softness=0.08)
         eq_called = self.brain.equity(ctx.obs.hole_cards, ctx.obs.board, n, weight)

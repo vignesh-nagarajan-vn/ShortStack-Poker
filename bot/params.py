@@ -38,6 +38,7 @@ DEFAULTS = {
     "river_value_range": 0.0,    # 1 = value-bet the river by equity vs their learned calling range
     "river_value_need": 0.55,    # ...betting when we win at least this often once called
     "river_call_min": 8,         # showdowns of called river bets needed before it applies
+    "river_call_prior": 0.5,     # ...prior for the bottom of their river calling range
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.68,       # raise a bet (tuned from 0.72)
     "post_call_margin": 0.00,    # extra equity over pot odds to call
