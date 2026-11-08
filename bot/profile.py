@@ -50,11 +50,15 @@ def shifted(opp) -> bool:
     return any(abs(opp.recent(k) - opp.rate(k)) > SHIFT_GAP for k in SHIFT_KEYS)
 
 
-def classify(opp, recent: bool = False) -> str:
+def classify(opp, recent: bool = False, maniac_max_ftb: float = 1.01) -> str:
     get = opp.recent if recent else opp.rate
     agg, pfr = get("aggression"), get("pfr")
     ftb, vpip = get("fold_to_bet"), get("vpip")
-    if agg > 0.55 or pfr > 0.65:
+    # A maniac never gives up. A bot that bets nearly every flop but still
+    # folds to our bets (quad-j's jish_4 folds ~50%) is not one: calling it
+    # down and dropping our bluffs, as the maniac mode does, throws away
+    # the fold equity it hands us (A/B: +0.6 bb/deal vs jish_4).
+    if (agg > 0.55 or pfr > 0.65) and ftb < maniac_max_ftb:
         return "maniac"
     if ftb > 0.58 or vpip < 0.40:
         return "nit"
@@ -86,7 +90,7 @@ class Profiler:
         if opp.hands < WARMUP_HANDS or opp.hands % EVERY:
             return False
         self.shift_seen = shifted(opp)
-        new = classify(opp, recent=self.shift_seen)
+        new = classify(opp, recent=self.shift_seen, maniac_max_ftb=self.base["maniac_max_ftb"])
         if new == self.profile:
             self.candidate, self.streak = new, 0
             return False
