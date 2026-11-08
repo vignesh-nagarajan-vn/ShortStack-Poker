@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>ShortStack decision pipeline</title>
+  <rect x="0" y="0" width="900" height="430" rx="12" fill="#fcfcfb"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52514e"/>
+    </marker>
+  </defs>
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#0b0b0b">One decision, about 1 ms</text>
+  <text x="24" y="54" font-size="12.5" fill="#52514e">Every request runs this path; everything left of the dashed line is learned over the half</text>
+
+  <!-- left: learning column -->
+  <line x1="300" y1="72" x2="300" y2="410" stroke="#c9c8c2" stroke-dasharray="5 5"/>
+  <g font-size="13">
+    <rect x="24" y="84" width="252" height="74" rx="8" fill="#eaf2fc" stroke="#2a78d6"/>
+    <text x="38" y="106" font-weight="600" fill="#0b0b0b">Opponent model</text>
+    <text x="38" y="125" fill="#52514e">VPIP, PFR, 3-bet, aggression,</text>
+    <text x="38" y="142" fill="#52514e">fold-to-bet, river calls and folds</text>
+
+    <rect x="24" y="172" width="252" height="74" rx="8" fill="#eaf2fc" stroke="#2a78d6"/>
+    <text x="38" y="194" font-weight="600" fill="#0b0b0b">Showdown learner</text>
+    <text x="38" y="213" fill="#52514e">strength of hands they actually</text>
+    <text x="38" y="230" fill="#52514e">bet, raised and called with</text>
+
+    <rect x="24" y="260" width="252" height="74" rx="8" fill="#eaf2fc" stroke="#2a78d6"/>
+    <text x="38" y="282" font-weight="600" fill="#0b0b0b">Profile and image</text>
+    <text x="38" y="301" fill="#52514e">maniac / nit / station / honest,</text>
+    <text x="38" y="318" fill="#52514e">our own stats kept unreadable</text>
+
+    <rect x="24" y="348" width="252" height="58" rx="8" fill="#fdeee7" stroke="#eb6834"/>
+    <text x="38" y="370" font-weight="600" fill="#0b0b0b">Autopilot detector</text>
+    <text x="38" y="389" fill="#52514e">opponent out of time: raise every hand</text>
+  </g>
+
+  <!-- right: per-decision path -->
+  <g font-size="13">
+    <rect x="330" y="84" width="170" height="60" rx="8" fill="#ffffff" stroke="#52514e"/>
+    <text x="345" y="108" font-weight="600" fill="#0b0b0b">Observation</text>
+    <text x="345" y="127" fill="#52514e">cards, pot, history</text>
+
+    <rect x="530" y="84" width="170" height="60" rx="8" fill="#e8f6f0" stroke="#1baf7a"/>
+    <text x="545" y="108" font-weight="600" fill="#0b0b0b">Opponent range</text>
+    <text x="545" y="127" fill="#52514e">weights from their line</text>
+
+    <rect x="730" y="84" width="150" height="60" rx="8" fill="#e8f6f0" stroke="#1baf7a"/>
+    <text x="745" y="108" font-weight="600" fill="#0b0b0b">Time bank</text>
+    <text x="745" y="127" fill="#52514e">60-1,500 samples</text>
+
+    <rect x="530" y="184" width="350" height="74" rx="8" fill="#e8f6f0" stroke="#1baf7a"/>
+    <text x="545" y="207" font-weight="600" fill="#0b0b0b">Vectorized Monte Carlo equity</text>
+    <text x="545" y="226" fill="#52514e">630 x 7,140 rank table: ~1.3 us per Omaha hand,</text>
+    <text x="545" y="243" fill="#52514e">equity vs the weighted range, not a random hand</text>
+
+    <rect x="330" y="184" width="170" height="74" rx="8" fill="#ffffff" stroke="#52514e"/>
+    <text x="345" y="207" font-weight="600" fill="#0b0b0b">Preflop table</text>
+    <text x="345" y="226" fill="#52514e">376,992 hands,</text>
+    <text x="345" y="243" fill="#52514e">O(1) percentile</text>
+
+    <rect x="330" y="298" width="550" height="56" rx="8" fill="#ffffff" stroke="#52514e"/>
+    <text x="345" y="321" font-weight="600" fill="#0b0b0b">Strategy: bet / raise / call / fold thresholds</text>
+    <text x="345" y="340" fill="#52514e">pot odds priced toward all-in odds by their barrel rate; SPR commit; semi-bluffs</text>
+
+    <rect x="330" y="372" width="550" height="40" rx="8" fill="#fdeee7" stroke="#eb6834"/>
+    <text x="345" y="397" font-weight="600" fill="#0b0b0b">Safety wrapper: any exception or illegal answer becomes CHECK_CALL</text>
+  </g>
+
+  <g stroke="#52514e" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M500,114 L526,114"/>
+    <path d="M276,121 H314 M276,209 H314 V72 H600 V80"/>
+    <path d="M615,144 L615,180"/>
+    <path d="M805,144 L805,180"/>
+    <path d="M415,144 L415,180"/>
+    <path d="M705,258 L705,294"/>
+    <path d="M415,258 L415,294"/>
+    <path d="M276,297 L326,318"/>
+    <path d="M276,377 L326,334"/>
+    <path d="M605,354 L605,368"/>
+  </g>
+</svg>
