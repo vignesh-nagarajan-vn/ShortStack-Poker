@@ -90,6 +90,24 @@ wins broadly: `range_pro` +0.35, `mc_basic` +0.36, `barreler` +0.20, `brown`
   twice as slow, a full half against an always-raise bot, real clock) passes.
 * `./tools/check_build.sh`: passed, 0 MB added on top of the base image.
 
+### Batch 3-5: reading always-bettors (idea from Drew's sdplo bot)
+
+Drew's bot (`x_drew_real`, an EV maximiser over Bayesian opponent ranges)
+beat the same 22-bot field by far more than we did against hyper-aggressive
+bots (always_half +11.9 vs our +5.1, maniac +11.0 vs +6.5), though it lost
+everywhere else and lost to us 8-0 in-process and 3-0 on the real judge.
+`sim.probe` showed why: against always_half we folded 47% on the flop and
+55% on the river, and a third of those folds gave up the best hand.
+`opponent_aggression` floored any multi-street bettor at `agg_bet` (0.40)
+and added 0.08 per earlier street bet, so a bot that bets every street with
+random hands was read as a top-44% hand by the river.
+
+| Candidate | Seeds | Pool diff (all) | Field diff | Notes | Verdict |
+|---|---|---|---|---|---|
+| floor = learned bet level, step x 2(1 - aggression) | 101-104 | +0.058 | +0.115 | +0.7 to +0.9 vs aggressive bots, but -0.35 to -0.41 vs every MC threshold bot: the learned floor reads selective bettors as too weak | reject |
+| same, floor and step fade only above 50% aggression (`agg_prev_adapt=1`) | 101-104 | +0.117 | +0.179 | selective bettors unchanged to the chip | confirm |
+| `agg_prev_adapt=1` | **105-112** | **+0.119** (z 7.0) | **+0.177** | always_half +1.46, maniac +0.78, barreler_half +0.65, always_pot +0.48, random +0.41; worst mc_drain -0.09 | **KEEP** |
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,

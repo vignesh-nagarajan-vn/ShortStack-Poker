@@ -53,24 +53,34 @@ class Strategy:
         toward what their showdown hands actually were."""
         p = self.p
         k = ctx.opp_raises_this_street
+        agg = self.brain.opponent.rates["aggression"]
+        bet = p["agg_bet"]
+        if p["learn_postflop"]:
+            freq_level = min(0.85, max(0.10, 1.0 - agg.value))
+            bet = self.brain.showdowns.bet_level(self._blend(p["agg_bet"], freq_level, agg.total, 60.0))
         if k == 0:
             level = 0.0
         elif not p["learn_postflop"]:
             level = p["agg_bet"] if k == 1 else p["agg_raise"] if k == 2 else p["agg_reraise"]
+        elif k == 1:
+            level = bet
+        elif k == 2:
+            level = self.brain.showdowns.raise_level(max(p["agg_raise"], bet + 0.15))
         else:
-            agg = self.brain.opponent.rates["aggression"]
-            freq_level = min(0.85, max(0.10, 1.0 - agg.value))
-            bet = self.brain.showdowns.bet_level(self._blend(p["agg_bet"], freq_level, agg.total, 60.0))
-            if k == 1:
-                level = bet
-            elif k == 2:
-                level = self.brain.showdowns.raise_level(max(p["agg_raise"], bet + 0.15))
-            else:
-                level = max(p["agg_reraise"], bet + 0.3)
+            level = max(p["agg_reraise"], bet + 0.3)
         earlier = {a.street for a in ctx.obs.action_history
                    if not a.is_me and a.action in RAISES and Street.PREFLOP < a.street < ctx.street}
         if earlier:
-            level = max(level, p["agg_bet"]) + p["agg_prev_street"] * len(earlier)
+            if p["agg_prev_adapt"]:
+                # A bot that bets almost every street says little by betting
+                # again. Selective bettors (aggression <= 50%) keep the fixed
+                # floor and step; above that both fade toward the learned bet
+                # level as their aggression rate approaches 1.
+                scale = min(1.0, max(0.0, 2.0 * (1.0 - agg.value)))
+                floor = scale * p["agg_bet"] + (1.0 - scale) * min(bet, p["agg_bet"])
+                level = max(level, floor) + p["agg_prev_street"] * len(earlier) * scale
+            else:
+                level = max(level, p["agg_bet"]) + p["agg_prev_street"] * len(earlier)
         return min(level, 0.9)
 
     def postflop_equity(self, ctx: Ctx) -> float:

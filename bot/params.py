@@ -25,6 +25,7 @@ DEFAULTS = {
     "agg_reraise": 0.78,         # two or more raises
     "agg_prev_street": 0.08,     # extra per earlier postflop street they bet
     "learn_preflop": 1.0,        # 1 = adapt preflop range floors to observed stats/showdowns
+    "agg_prev_adapt": 1.0,       # 1 = earlier-street bets add strength only as far as their betting is selective (A/B +0.12)
     "learn_postflop": 1.0,       # 1 = adapt postflop aggression levels too (A/B +0.14 bb/deal, 8 seeds)
     # --- postflop: our actions ----------------------------------------
     "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
