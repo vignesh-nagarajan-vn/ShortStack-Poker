@@ -731,6 +731,38 @@ one non-negative seed was one of those, so it is likely a little
 stronger than shown. None of these are confirmed in Docker yet; the five
 negative ones are the ones worth confirming and diffing.
 
+### Field scan, part 2: 17 more bots from the Devpost poker track
+
+The repos linked from the Devpost submissions for the poker prize that
+weren't in part 1 (six projects link no code and one repo is private), run
+the same way. We had 0 errors and used at most 6.5 s of the bank.
+
+| Opponent (repo) | W/C/L | Mean | Per seed | P(win) | P(chop) | P(loss) | Exp. pts |
+|---|---|---|---|---|---|---|---|
+| zuhairrr07/Poker-Bot | L L L | **-1.15** | -0.93, -0.82, -1.71 | 0% | 12% | 88% | 0.06 |
+| Utsavdotcom/aura-farmer | C L L | **-1.01** | -0.40, -0.99, -1.65 | 0% | 19% | 81% | 0.09 |
+| harishkumar123tamu/outliers | L L L | **-0.90** | -1.12, -0.90, -0.67 | 0% | 20% | 80% | 0.10 |
+| dunlapjack/poker-bot | C C L | -0.37 | +0.12, -0.51, -0.71 | 0% | 77% | 22% | 0.39 |
+| sereechid-ai/Polaris-Pokerbot | C C L | -0.36 | +0.21, -0.58, -0.72 | 0% | 77% | 22% | 0.39 |
+| Prunuus/heads-up | C C C | -0.09 | -0.48, +0.01, +0.20 | 3% | 90% | 7% | 0.48 |
+| malki-aal/heads-up-bundle | C C C | -0.04 | +0.35, -0.06, -0.41 | 4% | 91% | 6% | 0.49 |
+| 100RandomHumans/Datathon-2026 | C C C | -0.02 | +0.61, -0.29, -0.38 | 4% | 91% | 5% | 0.50 |
+| rayha-m/poker-bot | W W C | +0.39 | +0.46, +0.55, +0.15 | 47% | 53% | 0% | 0.74 |
+| PayneAM/heads-up-bundle | W C W | +0.55 | +0.61, +0.35, +0.69 | 59% | 41% | 0% | 0.79 |
+| jane-vo/tamu-datathon26 | W C W | +0.89 | +1.07, +0.74, +0.84 | 59% | 41% | 0% | 0.80 |
+| AiWithAmman/heads-up-bundle-main | W W C | +1.19 | +1.86, +1.10, +0.59 | 60% | 40% | 0% | 0.80 |
+| khoahonguyen0210/YAK-poker-bot | W C C | +0.71 | +1.83, +0.48, -0.19 | 71% | 29% | 0% | 0.86 |
+| AdityaVSM/heads-up-bundle | W W W | +2.10 | +2.25, +2.12, +1.93 | 100% | 0% | 0% | 1.00 |
+| Juan-Sett/HeadsUpBot | W W W | +2.12 | +1.31, +1.86, +3.19 | 100% | 0% | 0% | 1.00 |
+| RedRojoaka/datathon_2026 | W W W | +2.16 | +2.42, +2.18, +1.88 | 100% | 0% | 0% | 1.00 |
+| Nave3425/poker-bot | W W W | +8.19 | +8.52, +7.94, +8.11 | 100% | 0% | 0% | 1.00 |
+
+Expected total for part 2: **10.5 of 17 points** (23.8 of 36 over both
+parts). Three bots here beat us outright in most matches (zuhairrr07,
+aura-farmer, outliers, -0.9 to -1.15), more than any bot in part 1.
+AdityaVSM, RedRojoaka and zuhairrr07 (seed 3) emptied their time banks
+with six matches sharing the laptop. zuhairrr07 still won that seed.
+
 ## What to try next
 
 Done since the last list: PLO5-MCCFR and jish_4 diffs and Docker
