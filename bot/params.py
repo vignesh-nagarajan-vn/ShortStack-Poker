@@ -16,7 +16,7 @@ DEFAULTS = {
     "range_floor_2raise": 0.70,  # a re-raise
     "range_floor_3raise": 0.85,  # three or more
     "pre_reraise_equity": 0.57,  # equity vs their range needed to re-raise
-    "pre_call_margin_oop": 0.03, # extra equity over pot odds when out of position
+    "pre_call_margin_oop": 0.10, # extra equity over pot odds when out of position (was 0.03; field scan +0.11 bb/deal vs the 10 closest bots)
     "pre_call_margin_ip": 0.00,
     "bb_call_adapt": 0.0,        # >0: raise the out-of-position call margin by this x (bb_call_ref - their fold rate to our flop bets)
     "bb_call_ref": 0.50,         # ...fold rate at which no extra margin is asked
