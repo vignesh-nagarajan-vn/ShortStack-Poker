@@ -59,7 +59,7 @@ DEFAULTS = {
     "image_call_bonus": 0.04,    # equity we give up on marginal calls while above it...
     "image_attack_gap": 0.08,    # ...and the opponent's recent aggression is this far above its average
     "image_agg_cap": 0.45,       # above this aggression, halve our bluffs
-    "defend_gain": 0.0,          # >0: call wider while we fold to their first bet too often...
+    "defend_gain": 0.3,          # >0: call wider while we fold to their first bet too often (A/B +0.09)
     "defend_target": 0.55,       # ...above this fold rate on that street
     "defend_agg": 0.40,          # ...against bots whose postflop aggression is at least this
     "defend_cap": 0.10,          # ...giving up at most this much equity

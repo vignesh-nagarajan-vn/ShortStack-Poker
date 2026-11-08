@@ -399,6 +399,32 @@ arm. With 840 matches the CPU was less loaded and only `x_drew_fast`,
 The base lost to `x_drew_fast` by **-1.01 bb/deal** on these seeds: a Drew's
 bot that keeps its bank is the match ShortStack would lose.
 
+### Batch 13: minimum defense against frequent bettors (seeds 131-138)
+
+`sim.probe` against `x_drew_fast` (4 seeds): it bets most flops (we faced
+5,535 flop bets in 8,000 hands), we fold 68% of them, and a third of those
+folds gave up the best hand (about 10,900 bb of pots). `defend_gain` lowers
+the call threshold while our fold rate to their first bet on a street is
+above `defend_target`, against bots with postflop aggression of at least
+0.40. 22 opponents, A/A arm; only `x_drew_fast` (+0.18) and `x_brown_real`
+(-0.11) moved in the A/A arm.
+
+| Candidate | Deterministic 20 | Self variants | range_aggro | x_brown_real | barreler | x_drew_fast | Worst det |
+|---|---|---|---|---|---|---|---|
+| A/A | 0.000 | 0.000 | 0.000 | -0.112 | 0.000 | +0.183 (se 0.112) | 0.000 |
+| **`defend_gain=0.3`** | **+0.087** (se 0.029) | +0.052 | +0.114 | -0.073 | -0.098 | -0.131 (se 0.142) | always_half -0.146 |
+| `defend_gain=0.5` | +0.052 | -0.022 | +0.190 | +0.029 | -0.148 | +0.008 | mc_loose -0.191 |
+| `0.5, target 0.50` | +0.061 | +0.024 | +0.088 | -0.210 | -0.161 | -0.009 | barreler -0.161 |
+| `0.5` with the river | +0.088 | +0.044 | +0.177 | -0.112 | -0.166 | -0.015 | barreler -0.166 |
+| `0.8, cap 0.15` | +0.047 | +0.044 | +0.176 | -0.239 | -0.086 | +0.006 | mc_loose -0.414 |
+
+range_pro is unchanged in every arm: its aggression is under 0.40, so the
+rule never fires. **Kept `defend_gain=0.3`**: it passes the keep rule
+(+0.087, z 3, no opponent worse than -0.15) and helps range_aggro and the
+self variants. It does **not** fix the match against Drew's bot with a full
+time bank: every arm is within that bot's A/A noise, and the base lost to
+it by -0.86 bb/deal on these seeds.
+
 ## What to try next
 
 Done since the last list: the preflop re-tune (batch 8, nothing beat the
