@@ -252,6 +252,30 @@ batch carries an A/A arm to measure this.
 | `draw_raise=0.5` | **-0.175** | -0.213 | | | -0.502 | reject |
 | `commit_shove_eq=0.50` | -0.102 | -0.131 | | | -0.604 | reject |
 
+### Docker matches vs Drew's sdplo_v4 (tournament conditions)
+
+The organizers suggested playing other teams' images. `tools/container_match.sh`
+built both bots with the organizers' Dockerfile (ShortStack at 12ac2aa,
+Drew's bot at c0b0a6a, sdplo_v4) and played each half in fresh containers
+with 1 CPU, 4 GB and read-only files, the judge on a private Docker network.
+
+| Seed | ShortStack bb/deal | 95% CI | Verdict | ShortStack time | Drew's bank |
+|---|---|---|---|---|---|
+| 11 | +1.23 | +0.89 to +1.56 | win | 5.6 / 5.5 s | empty, 663 / 665 calls skipped |
+| 12 | +1.21 | +0.81 to +1.61 | win | 5.7 / 5.5 s | empty, 703 / 669 skipped |
+| 13 | +0.73 | +0.20 to +1.25 | win | 5.5 / 6.4 s | empty, 667 / 170 skipped |
+| 14 | **+0.17** | -0.41 to +0.74 | **chop** | 6.2 / 6.2 s | empty only at the end, 22 / 19 skipped |
+
+Three wins and a chop, with 0 errors. The wins come largely from Drew's
+bot emptying its bank a third of the way through the half on 1 CPU; when it
+kept its bank (seed 14) the match was close to even. On a faster
+tournament machine that is the match to expect.
+
+Two trivial bots (calling stations) in the same setup were charged
+0.52-0.65 ms per request, so the time bank's 0.6 ms overhead assumption
+holds in containers. ShortStack's 5.5-6.4 s comes from the cheap 40-sample
+fallback, which runs until about 2.5 s of the bank is left by design.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
