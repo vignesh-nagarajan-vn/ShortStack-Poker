@@ -69,6 +69,9 @@ class OpponentModel:
     rates: dict = field(default_factory=lambda: {k: Rate(v) for k, v in PRIORS.items()})
     showdowns: list = field(default_factory=list)      # (opp_hole, board, opp steps)
     last_steps: list = field(default_factory=list)
+    # Share of our called river bets that won at showdown. Kept apart from
+    # `rates` so profile classification and mode-shift checks ignore it.
+    river_called_wins: Rate = field(default_factory=lambda: Rate(0.65))
 
     # ---- feeding ---------------------------------------------------------
 
@@ -114,6 +117,8 @@ class OpponentModel:
                 r["fold_to_bet"].add(s.action == Action.FOLD)
         if any(s.street != Street.PREFLOP for s in steps) or result.went_to_showdown:
             r["wtsd"].add(result.went_to_showdown)
+        if result.went_to_showdown and self._called_our_river_bet(steps):
+            self.river_called_wins.add(result.winner == "me")
         if result.went_to_showdown and result.opp_hole:
             opp_steps = [s for s in steps if not s.is_me]
             self.showdowns.append((tuple(result.opp_hole), tuple(result.board), opp_steps))
@@ -137,6 +142,13 @@ class OpponentModel:
             if prev.is_me:
                 return prev.action in RAISES
         return False
+
+    @staticmethod
+    def _called_our_river_bet(steps: list[Step]) -> bool:
+        """Did the hand end with the opponent calling our river bet/raise?"""
+        river = [s for s in steps if s.street == Street.RIVER]
+        return (len(river) >= 2 and river[-2].is_me and river[-2].action in RAISES
+                and not river[-1].is_me and river[-1].action == Action.CHECK_CALL)
 
     # ---- reading ---------------------------------------------------------
 

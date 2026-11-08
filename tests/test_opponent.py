@@ -60,3 +60,40 @@ def test_strength_percentile_orders_hands():
     board = c("As Kc 6d")
     assert learner.strength_percentile(c("Ah Ad Kh 7c 8c"), board) > 0.9
     assert learner.strength_percentile(c("7c 8d 9h Th Qs"), board) < 0.5
+
+
+def test_river_called_wins_counts_only_called_river_bets():
+    from game import Action, HandResult, Street
+    from bot.opponent import OpponentModel, Step
+
+    def hand(steps, winner):
+        m.observe_hand(steps, HandResult(hand_index=0, my_net=0, pot=40, went_to_showdown=True,
+                                         board=(), opp_hole=None, winner=winner))
+
+    m = OpponentModel()
+    pre = [Step(Street.PREFLOP, False, Action.CHECK_CALL), Step(Street.PREFLOP, True, Action.CHECK_CALL)]
+    bet_called = [Step(Street.RIVER, False, Action.CHECK_CALL), Step(Street.RIVER, True, Action.RAISE_POT),
+                  Step(Street.RIVER, False, Action.CHECK_CALL)]
+    we_called = [Step(Street.RIVER, False, Action.RAISE_HALF), Step(Street.RIVER, True, Action.CHECK_CALL)]
+    hand(pre + bet_called, "me")
+    hand(pre + bet_called, "opp")
+    hand(pre + we_called, "me")          # they bet, we called: not counted
+    r = m.river_called_wins
+    assert r.total == 2 and r.hits == 1
+
+
+def test_thin_river_shift_scales_with_called_bet_win_rate():
+    from bot.core import Brain
+    from game import AgentConfig
+
+    brain = Brain(AgentConfig())
+    r = brain.opponent.river_called_wins
+    assert brain.strategy.thin_river_shift() == 0.0      # no evidence yet
+    for _ in range(40):
+        r.add(True)                                      # every called bet won
+    assert abs(brain.strategy.thin_river_shift() - brain.params["thin_river_shift"]) < 1e-9
+    r2 = type(r)(0.65)
+    for i in range(40):
+        r2.add(i % 2 == 0)                               # coin flip: no shift
+    brain.opponent.river_called_wins = r2
+    assert brain.strategy.thin_river_shift() == 0.0

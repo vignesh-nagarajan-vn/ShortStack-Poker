@@ -91,7 +91,10 @@ class Strategy:
         if ctx.to_call > 0 and ctx.committed_after_call(p["commit_ratio"]):
             return self.committed(ctx, eq)
         if ctx.to_call == 0:
-            bet_eq = p["post_bet_eq_river"] if ctx.street == Street.RIVER else p["post_bet_eq"]
+            if ctx.street == Street.RIVER:
+                bet_eq = p["post_bet_eq_river"] - self.thin_river_shift()
+            else:
+                bet_eq = p["post_bet_eq"]
             if ctx.spr < p["low_spr"]:
                 bet_eq = min(bet_eq, p["low_spr_bet_eq"])
                 size = Action.RAISE_POT
@@ -106,6 +109,19 @@ class Strategy:
         if eq >= self.call_odds(ctx) + p["post_call_margin"] - bonus:
             return ctx.call()
         return ctx.fold()
+
+    def thin_river_shift(self) -> float:
+        """Lower the river value-bet bar when the opponent's river calls keep
+        losing: they call with hands worse than we assume, so medium hands
+        are value too. Self-correcting: thinner bets lose more often, which
+        pulls the win rate (and the shift) back down."""
+        p = self.p
+        rate = self.brain.opponent.river_called_wins
+        if rate.total < p["thin_river_min"]:
+            return 0.0
+        span = max(1e-6, p["thin_river_full"] - p["thin_river_from"])
+        scale = min(1.0, max(0.0, (rate.value - p["thin_river_from"]) / span))
+        return p["thin_river_shift"] * scale
 
     def call_odds(self, ctx: Ctx) -> float:
         """Equity needed to call before the river. An opponent that keeps

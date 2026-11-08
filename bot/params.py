@@ -29,6 +29,10 @@ DEFAULTS = {
     # --- postflop: our actions ----------------------------------------
     "post_bet_eq": 0.60,         # equity vs their range to bet when checked to
     "post_bet_eq_river": 0.63,
+    "thin_river_shift": 0.10,    # max drop in the river bet threshold vs loose river callers
+    "thin_river_from": 0.70,     # our called river bets winning this often starts the drop...
+    "thin_river_full": 0.85,     # ...and this often applies all of it
+    "thin_river_min": 10,        # called river bets seen before it can apply
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.68,       # raise a bet (tuned from 0.72)
     "post_call_margin": 0.00,    # extra equity over pot odds to call
