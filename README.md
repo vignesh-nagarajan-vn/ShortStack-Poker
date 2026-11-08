@@ -11,13 +11,23 @@ ShortStack plays 1,000-deal duplicate matches against every other team's bot. It
 - **Stack:** Python, numpy, FastAPI (organizer plumbing, unchanged)
 - **Run it:** `pip install -r requirements-dev.txt`, then `python -m pytest -q`; see [EXTENDED.md](EXTENDED.md) for matches, the league and the build check
 
-<p align="center"><img src="docs/images/pipeline.svg" alt="Decision pipeline: the opponent model, showdown learner, profile and autopilot detector feed a range-weighted vectorized Monte Carlo equity estimate, then thresholds and a safety wrapper" width="860"></p>
-
-<p align="center"><img src="docs/images/range_weights.png" alt="Weight of each sampled opponent hand by made-hand strength: flat after a check, cut at 0.40 after a bet, 0.62 after a raise, and only 0.10 when a bot bets every street" width="760"></p>
-
-<p align="center"><img src="docs/images/league.png" alt="ShortStack's margin against each of the 22 non-self pool bots, from +0.86 bb/deal against range_pro to +9.76 against the calling station" width="760"></p>
-
-<p align="center"><img src="docs/images/ab_tests.png" alt="Paired A/B results: learn_postflop +0.097 and agg_prev_adapt +0.177 were kept; five other ideas fell short of the +0.05 bar" width="760"></p>
+<table>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/images/gallery/01_thumbnail.png" alt="ShortStack: a poker bot that reads ranges, not random hands. 66-0-0 vs a 22-bot test pool, 1.3 ms per 1,000-sample equity estimate, 0 losses in 1-CPU Docker tournament matches" width="760"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/gallery/02_pipeline.png" alt="Decision pipeline: the opponent model, showdown learner, profile and autopilot detector feed a range-weighted vectorized Monte Carlo equity estimate, then thresholds and a safety wrapper"></td>
+    <td width="50%"><img src="docs/images/gallery/03_ranges.png" alt="Range weights by made-hand strength after a check, a bet, a raise and from an always-bettor, with the weighted equity, range weight and learned level formulas"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/gallery/04_engine.png" alt="1,000 equity samples take about 15 ms with the starter evaluator, 1.3 ms for ShortStack on the flop and turn and 0.36 ms on the river, using a 630 by 7,140 rank table"></td>
+    <td width="50%"><img src="docs/images/gallery/05_league.png" alt="66 wins, 0 chops, 0 losses against the 22 non-self pool bots, from +0.86 bb/deal against range_pro to +9.76 against the calling station"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/gallery/06_ab.png" alt="Paired A/B results: five kept changes from +0.075 to +0.144 bb/deal, and six rejected ideas from +0.018 to -0.402"></td>
+    <td width="50%"><img src="docs/images/gallery/07_docker.png" alt="Docker matches at 1 CPU against a Bayesian EV-maximising rival, v4 and v5: 2 wins, 6 chops, 0 losses, mean +0.32 bb/deal, 0 errors"></td>
+  </tr>
+</table>
 
 ## How it works
 
