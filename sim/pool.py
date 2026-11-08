@@ -50,6 +50,10 @@ def registry() -> dict:
     brown_path = os.environ.get("BROWN_PATH", os.path.join(os.path.dirname(ROOT), "heads-up-bot"))
     if os.path.isfile(os.path.join(brown_path, "agent.py")):
         bots["x_brown_real"] = _external_factory(brown_path, "x_brown_real")
+    # Drew's sdplo bot (github.com/burnerdrew2-prog/tamu-heads-up-bot), same idea.
+    drew_path = os.environ.get("DREW_PATH", os.path.join(os.path.dirname(ROOT), "tamu-heads-up-bot"))
+    if os.path.isfile(os.path.join(drew_path, "agent.py")):
+        bots["x_drew_real"] = _external_factory(drew_path, "x_drew_real")
     # Self-play: our own bot with features switched off, standing in for
     # earlier versions and for teams that build something close to us.
     for name, overrides in SELF_VARIANTS.items():
