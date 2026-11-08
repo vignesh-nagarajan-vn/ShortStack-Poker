@@ -13,9 +13,12 @@ def flush_draw(holes: np.ndarray, board) -> np.ndarray:
     under the 2 + 3 rule), else 0.0."""
     board = np.asarray(board, dtype=np.intp)
     board_suits = np.bincount(board & 3, minlength=4)          # (4,)
-    hole_suits = np.stack([(holes & 3) == s for s in range(4)], axis=-1).sum(axis=1)  # (n, 4)
-    has = (hole_suits >= 2) & (board_suits[None, :] >= 2)
-    return has.any(axis=1).astype(np.float64)
+    out = np.zeros(len(holes), dtype=bool)
+    if (board_suits >= 2).any():
+        suits = holes & 3
+        for s in np.flatnonzero(board_suits >= 2):             # at most 2 suits
+            out |= (suits == s).sum(axis=1) >= 2
+    return out.astype(np.float64)
 
 
 def straight_window_count(hole, board) -> int:

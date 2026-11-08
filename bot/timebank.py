@@ -30,7 +30,9 @@ MAX_SAMPLES = 1500
 # few runs) at the start of each half and every PROBE_EVERY hands; the probe
 # takes about REF_PROBE_SECONDS on the dev laptop, and the overhead estimate
 # scales with the ratio.
-REF_PROBE_SECONDS = 0.0016    # measured 1.25-1.5 ms; 1.6 leaves headroom for noise
+# The faster engine (November 2026) runs the probe in 0.76x the time
+# (interleaved median), so the reference moved from 1.6 ms to 1.2 ms.
+REF_PROBE_SECONDS = 0.0012    # measured 0.95-1.15 ms; 1.2 leaves headroom for noise
 PROBE_EVERY = 100
 MAX_LOAD_SCALE = 4.0
 

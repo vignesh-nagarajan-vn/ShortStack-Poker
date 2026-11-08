@@ -96,17 +96,19 @@ def agent_factory() -> Callable[[AgentConfig], Player]:
 class VirtualClock:
     """A deterministic stand-in for perf_counter: every reading costs `tick`
     seconds (so each timed decision costs about one tick) and each Monte
-    Carlo call costs `per_call` plus `per_sample` per sample (measured on
-    this laptop with range weights: 0.35 ms + 3.5 us per sample, padded
-    30% to match the real-clock bot's sample counts in full matches).
+    Carlo call costs `per_call` plus `per_sample` per sample. These were
+    0.45 ms + 4.5 us (measured with range weights, padded 30% to match the
+    real-clock bot's sample counts in full matches). The November 2026
+    engine speedup ran our bot's recorded equity calls in 0.54-0.58x the
+    time, so they are now 0.32 ms + 2.5 us (the same padding, rounded up).
     run_match charges a virtual-time player by this clock too, so a
     machine stall can't empty its bank either. With it the bot's sample counts, and so
     its decisions, no longer depend on machine load, and an A/A test of
     identical parameters gives identical play. Defaults match this laptop:
     about 3.5 s of thinking per half, as on the real judge."""
 
-    def __init__(self, tick: float = 0.0001, per_call: float = 0.00045,
-                 per_sample: float = 4.5e-6) -> None:
+    def __init__(self, tick: float = 0.0001, per_call: float = 0.00032,
+                 per_sample: float = 2.5e-6) -> None:
         self.t = 0.0
         self.tick, self.per_call, self.per_sample = tick, per_call, per_sample
 
@@ -129,11 +131,11 @@ class BrainPlayer(Player):
     with a VirtualClock unless VIRTUAL_TIME is off."""
 
     def __init__(self, config: AgentConfig, overrides: dict | None = None,
-                 virtual_time: bool | None = None) -> None:
+                 virtual_time: bool | None = None, clock_costs: dict | None = None) -> None:
         super().__init__(config)
         from bot.core import Brain
         virtual = VIRTUAL_TIME if virtual_time is None else virtual_time
-        self.clock = VirtualClock() if virtual else None
+        self.clock = VirtualClock(**(clock_costs or {})) if virtual else None
         self.brain = Brain(config, overrides or {}, clock=self.clock)
 
     def act(self, obs: Observation) -> Action:

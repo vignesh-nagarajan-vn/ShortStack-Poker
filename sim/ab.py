@@ -92,8 +92,12 @@ def _job(job: tuple) -> dict:
     from sim.run_match import play_match
     from game import BIG_BLIND
 
+    # "vc_per_call" / "vc_per_sample" set the virtual clock's equity costs
+    # instead of a bot parameter (e.g. to replay the old, slower engine).
+    clock = {k[3:]: v for k, v in overrides.items() if k.startswith("vc_")}
+    overrides = {k: v for k, v in overrides.items() if not k.startswith("vc_")}
     make(overrides)                      # fail fast on unknown params
-    me = class_factory(BrainPlayer, arm, overrides=overrides)
+    me = class_factory(BrainPlayer, arm, overrides=overrides, clock_costs=clock)
     start = time.perf_counter()
     out = play_match(me, resolve(opp), seed, deals)
     h1, h2 = out.halves

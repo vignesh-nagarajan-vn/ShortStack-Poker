@@ -160,6 +160,26 @@ thinks less instead of running out. Under the simulator's virtual clock the
 probe is skipped, so A/B results are unaffected. Real judge vs Drew's bot
 afterwards: 4.08 s of 8 s, as before.
 
+### Faster equity engine (kept)
+
+Profiling a 600-sample equity call showed work that was repeated or slower
+than it needed to be:
+
+| Change | Effect |
+|---|---|
+| Our own hand: best rank per board triple built once per hand (10 contiguous rows of the table), so each runout costs 10 lookups instead of 100 | about 0.6 us per sample saved on the flop and turn |
+| River: the opponent's score comes from a 630-entry best-per-pair table for the fixed board | about 4x faster river calls |
+| Range weights: made-hand strength from the same per-pair table, one argsort instead of two, flush draws by comparing only the suits that are live | about 2x cheaper weights |
+| Card sampling: partial Fisher-Yates over all rows (argsort of random keys kept below 64 samples) | about 1.7x faster |
+
+Given the same cards the results are bit-identical (checked over 800 random
+spots). On our bot's recorded equity calls from full matches the new engine
+takes 0.54-0.58x the time, so `sim.players.VirtualClock` moved from
+0.45 ms + 4.5 us per sample to 0.32 ms + 2.5 us. The timing probe got
+faster too (0.76x, interleaved), so `REF_PROBE_SECONDS` moved from 1.6 ms
+to 1.2 ms (idle laptop: 1.07-1.26 ms, load scale 1.00-1.05). Real clock
+afterwards: 4.6 s charged per half, 0 errors, as before.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,

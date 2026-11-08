@@ -37,11 +37,11 @@ def _sigmoid(x: np.ndarray) -> np.ndarray:
 def made_strength(opp: np.ndarray, board) -> np.ndarray:
     """Each sampled hand's made-hand strength on the visible board, as its
     rank within the sample (0 = weakest sampled, 1 = strongest)."""
-    triples = fe.board_triples_partial(board)
-    pairs = fe.hole_pairs(opp)
-    made = fe.RANK[pairs[:, :, None], triples[None, None, :]].max(axis=(1, 2))
-    order = made.argsort(kind="stable").argsort(kind="stable")
-    return order / max(1, len(opp) - 1)
+    made = fe.pair_best(fe.board_triples_partial(board))[fe.hole_pairs(opp)].max(axis=1)
+    order = made.argsort(kind="stable")
+    rank = np.empty(len(opp), dtype=np.float64)
+    rank[order] = np.arange(len(opp))
+    return rank / max(1, len(opp) - 1)
 
 
 def postflop_weight(board, pre_floor: float, aggression: float, softness: float = 0.12,

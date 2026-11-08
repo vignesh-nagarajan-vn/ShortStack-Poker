@@ -17,6 +17,7 @@ max over a 10 x 10 block, and thousands of hands are scored per numpy call.
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from itertools import combinations
 from math import comb
 
@@ -117,6 +118,33 @@ def board_triples_partial(board) -> np.ndarray:
     (1, 4 or 10 triples): the "made hand so far" on an incomplete board."""
     board = list(board)
     return np.array([TRIPLE_INDEX[a, b, c] for a, b, c in combinations(board, 3)], dtype=np.intp)
+
+
+@lru_cache(maxsize=16)
+def _pair_best_cached(triples: tuple) -> np.ndarray:
+    best = RANK[:, list(triples)].max(axis=1)
+    best.flags.writeable = False
+    return best
+
+
+def pair_best(triples) -> np.ndarray:
+    """(630,) best rank of every hole pair over a fixed set of board
+    triples. Opponents' hands then score with 10 lookups in a small table
+    instead of 10 x len(triples) lookups in the 9 MB one."""
+    return _pair_best_cached(tuple(int(t) for t in triples))
+
+
+@lru_cache(maxsize=4)
+def _triple_best_cached(pairs: tuple) -> np.ndarray:
+    best = RANK[list(pairs)].max(axis=0)
+    best.flags.writeable = False
+    return best
+
+
+def triple_best(pairs) -> np.ndarray:
+    """(7140,) best rank of a fixed set of hole pairs (our own hand) with
+    every board triple. Built once per hand (10 contiguous table rows)."""
+    return _triple_best_cached(tuple(int(p) for p in pairs))
 
 
 def best_rank_batch(pairs: np.ndarray, triples: np.ndarray) -> np.ndarray:

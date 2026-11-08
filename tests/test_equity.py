@@ -65,3 +65,29 @@ def test_fast_enough():
         eng.equity(hole, board, 300)
     per_call = (time.perf_counter() - start) / 50
     assert per_call < 0.004, f"{per_call * 1e3:.2f} ms per 300-sample equity call"
+
+
+def test_sampler_draws_distinct_live_cards_uniformly():
+    eng = EquityEngine(3)
+    dead = [0, 7, 13, 22, 35]
+    for n in (10, 5000):                      # both the sort and the shuffle paths
+        draw = eng.sample(dead, n, 10)
+        assert draw.shape == (n, 10)
+        assert all(len(set(row)) == 10 for row in draw)
+        assert not np.isin(draw, dead).any()
+    counts = np.bincount(eng.sample(dead, 60000, 7).ravel(), minlength=36)
+    live = np.setdiff1d(np.arange(36), dead)
+    expected = 60000 * 7 / live.size
+    assert np.all(np.abs(counts[live] - expected) < 0.05 * expected)
+
+
+def test_cached_rank_tables_match_the_full_table():
+    from bot import fasteval as fe
+    rng = np.random.default_rng(4)
+    for _ in range(20):
+        cards = rng.permutation(36)
+        hole, board = cards[:5], cards[5:10]
+        pairs, triples = fe.hole_pairs(hole), fe.board_triples(board)
+        full = fe.RANK[pairs[:, None], triples[None, :]]
+        assert np.array_equal(fe.triple_best(pairs)[triples], full.max(axis=0))
+        assert np.array_equal(fe.pair_best(triples)[pairs], full.max(axis=1))

@@ -39,12 +39,13 @@ class ShowdownLearner:
     def strength_percentile(self, hole, board) -> float:
         """Made-hand strength of `hole` on `board` vs random hands."""
         triples = fe.board_triples_partial(board)
-        mine = int(fe.RANK[fe.hole_pairs(np.asarray(hole))[:, None], triples[None, :]].max())
+        by_pair = fe.pair_best(triples)
+        mine = int(by_pair[fe.hole_pairs(np.asarray(hole))].max())
         dead = np.asarray(list(hole) + list(board))
         live = np.setdiff1d(np.arange(36), dead)
         keys = self.rng.random((self.ref_samples, live.size))
         others = live[np.argpartition(keys, 4, axis=1)[:, :5]]
-        theirs = fe.RANK[fe.hole_pairs(others)[:, :, None], triples[None, None, :]].max(axis=(1, 2))
+        theirs = by_pair[fe.hole_pairs(others)].max(axis=1)
         return float(((theirs < mine) + 0.5 * (theirs == mine)).mean())
 
     def add(self, opp_hole, board, opp_steps, we_raised_preflop: bool) -> None:
