@@ -223,6 +223,35 @@ by default, so play is the same as 00cc8c3).
   name lookup takes longer than the 2 s health-check timeout). Use
   `--agent1 http://127.0.0.1:5008 --agent2 http://127.0.0.1:5009`.
 
+### Batch 8: threshold screen (seeds 101-104, 21 strong opponents)
+
+One change per arm against 21 opponents chosen for strength and variety
+(range_pro, range_aggro, brown, x_brown_real, x_drew_real, the MC bots,
+adaptive bots, barrelers, nit, maniac, guide_example, random and four self
+variants). Columns: diff in bb/deal for the pool and the field, then
+against the three strongest bots. `x_drew_real` results are noise here:
+it times itself on the real clock, and with 15 workers sharing the CPU its
+bank emptied in 4 of 8 base halves but rarely in the candidate arms, so
+every arm showed -0.2 to -1.4 against it (about -0.03 on each pool mean).
+It is measured through Docker instead, and left out of later batches. Most arms also sit about +0.1
+above the base, which points to an unlucky base run; the confirmation
+batch carries an A/A arm to measure this.
+
+| Candidate | Pool | Field | range_pro | range_aggro | x_brown_real | Next |
+|---|---|---|---|---|---|---|
+| `barrel_weight=0.4` | +0.184 | +0.222 | +0.011 | -0.124 | +0.021 | confirm |
+| `post_pot_size_eq=0.70` | +0.123 | +0.128 | +0.172 | +0.106 | +0.133 | confirm |
+| `sb_raise_pot_above=0.75` | +0.133 | +0.140 | -0.066 | +0.195 | +0.023 | confirm |
+| `post_bet_eq=0.63` | +0.125 | +0.134 | -0.055 | -0.017 | -0.195 | confirm |
+| `post_raise_eq=0.65` | +0.124 | +0.154 | -0.085 | -0.042 | -0.274 | confirm |
+| `sb_raise_half_above=0.55` | +0.120 | +0.141 | +0.180 | -0.167 | +0.175 | within the base offset |
+| `sb_raise_half_above=0.65`, `sb_fold_below=0.10`, `bb_raise_above=0.80`, `post_bet_eq=0.57` | +0.096 to +0.103 | | | | | within the base offset |
+| `adaptive_samples=1` (z 2 / z 1.5) | +0.059 / +0.065 | | -0.119 / -0.019 | -0.132 / -0.033 | | reject |
+| `pre_reraise_equity` 0.54 / 0.60, `pre_call_margin_oop` 0 / 0.06, `post_raise_eq=0.71`, `post_pot_size_eq=0.80`, `barrel_weight=0.8`, `bb_raise_above=0.60` | +0.01 to +0.07 | | | | | reject |
+| `river_value_range=1` with a 0.3 prior | **-0.198** | -0.246 | | | -0.441 | reject |
+| `draw_raise=0.5` | **-0.175** | -0.213 | | | -0.502 | reject |
+| `commit_shove_eq=0.50` | -0.102 | -0.131 | | | -0.604 | reject |
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
