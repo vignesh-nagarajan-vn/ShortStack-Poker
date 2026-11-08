@@ -341,6 +341,43 @@ repeat on fresh seeds; it was most likely the unlucky base run batch 8
 suspected. Not run against Drew's bot, since it already fails on the
 closest pool bots.
 
+### Batch 11: batch 8 finalists and river ideas (seeds 113-120, before `street_levels`)
+
+27 opponents (the pool without `x_drew_real`, `agent` and six self
+variants), 8 fresh seeds, plus an **A/A arm** with identical parameters.
+The A/A arm came out -0.054 (z -7.4): against bots that read the real
+clock the base itself moved by up to 0.6 bb/deal between two runs
+(`brown` -0.62, `mc_basic` -0.57, `x_brown_real` -0.30). The paired
+standard errors do not see this, so pool means against those bots are not
+trustworthy under a loaded CPU. The A/A arm's diff was exactly 0 against
+16 opponents (the baselines, `nit`, `maniac`, `weak_tight`,
+`guide_example`, `checkfold`, `mc_loose`, `adaptive`, `barreler_half` and
+the four self variants), so candidates are scored on those
+("deterministic"), with the noisier strong bots alongside.
+
+| Candidate | Deterministic 16 | Self variants | range_pro | range_aggro | x_brown_real | Verdict |
+|---|---|---|---|---|---|---|
+| A/A | 0.000 | 0.000 | +0.042 | -0.022 | -0.298 | noise floor |
+| `river_bluff_adapt=1, river_bluff_min_obs=6` | **+0.062** (se 0.012) | **+0.195** | **+0.307** | **+0.232** | +0.190 | **keep** (re-checked on the new base, below) |
+| `river_bluff_adapt=1` (12 observations) | +0.014 | +0.047 | +0.156 | +0.090 | +0.235 | weaker than 6 |
+| `barrel_weight=0.4` | +0.136 | -0.054 | -0.216 | +0.178 | +0.123 | reject: gains on weak bots only |
+| `barrel_weight=0.4, post_pot_size_eq=0.70` | +0.150 | -0.014 | +0.025 | +0.105 | +0.169 | reject: same pattern |
+| `post_call_margin=-0.02` | +0.044 | -0.100 | -0.231 | +0.103 | +0.178 | reject |
+| `post_bet_eq=0.63` | +0.021 | +0.006 | -0.144 | +0.161 | +0.185 | reject |
+| `agg_bet=0.35` | +0.021 | -0.020 | -0.006 | +0.120 | +0.055 | reject |
+| `river_bluff_freq=0.12` | -0.021 | -0.047 | -0.035 | +0.157 | +0.171 | reject |
+| `post_pot_size_eq=0.70` | -0.010 | -0.084 | -0.029 | +0.167 | -0.300 | reject |
+| `sb_raise_pot_above=0.75` | -0.051 | -0.051 | -0.072 | +0.193 | -0.434 | reject |
+| `post_raise_eq=0.65` | -0.113 | -0.213 | -0.037 | +0.422 | -0.360 | reject |
+
+Adaptive river bluffs answer the leak `sim.probe` showed: range_pro folds
+77% of the time to our river bets, yet ShortStack bluffed almost never
+(9 of 257 folds). The rule only bluffs air when an opponent's measured fold
+rate to that bet size pays for it, so stations switch it off by themselves.
+Needing 6 observed river bets per size instead of 12 lets it start early
+enough in the half to matter. It gains most against the strongest bots,
+which is where matches are close.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
