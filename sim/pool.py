@@ -54,6 +54,14 @@ def registry() -> dict:
         # The same bot on a machine 3x faster: it never runs out of time, as in
         # the one container match (seed 14) where it kept its bank.
         bots["x_drew_fast"] = fast_machine(bots["x_drew_real"], "x_drew_fast", 3.0)
+    # Other teams' published bots, from a local copy of their agent.py folder
+    # (never committed here): CsaBest's PLO5-MCCFR (fjdanisaf/plo5-mccfr,
+    # copied out of the image; its C core needs Linux) and quad-j's jish_4
+    # (github.com/650JoshLee/quad-j-jish, needs numba). Not in the default pool.
+    for env, name in (("PLO5_PATH", "x_plo5"), ("JISH_PATH", "x_jish4")):
+        path = os.environ.get(env)
+        if path and os.path.isfile(os.path.join(path, "agent.py")):
+            bots[name] = _external_factory(path, name)
     # Self-play: our own bot with features switched off, standing in for
     # earlier versions and for teams that build something close to us.
     for name, overrides in SELF_VARIANTS.items():
