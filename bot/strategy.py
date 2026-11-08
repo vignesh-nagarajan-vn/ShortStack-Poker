@@ -98,13 +98,28 @@ class Strategy:
             if ctx.spr < p["low_spr"]:
                 bet_eq = min(bet_eq, p["low_spr_bet_eq"])
                 size = Action.RAISE_POT
+            elif ctx.street == Street.RIVER and ctx.can_raise:
+                verdict = self.river_value(ctx)
+                if verdict is not None:          # None: not enough evidence, use the default rule
+                    if verdict:
+                        return ctx.raise_(Action.RAISE_POT if verdict == 2 else Action.RAISE_HALF)
+                    bet_eq = 2.0                 # their calling range beats us: no value bet
             if eq >= bet_eq and ctx.can_raise:
                 return ctx.raise_(size)
+            if ctx.can_raise and ctx.street == Street.RIVER:
+                bluff = self.river_bluff(ctx, eq)
+                if bluff is not None:
+                    return ctx.raise_(bluff)
             if ctx.can_raise and self.should_bluff(ctx, eq):
                 return ctx.raise_(Action.RAISE_HALF)
             return ctx.call()
-        if eq >= p["post_raise_eq"] and ctx.can_raise:
+        raise_eq = p["post_raise_eq"]
+        if ctx.street == Street.RIVER and p["thin_river_raise"]:
+            raise_eq -= self.thin_river_shift()
+        if eq >= raise_eq and ctx.can_raise:
             return ctx.raise_(size)
+        if ctx.can_raise and self.draw_raise(ctx, eq):
+            return ctx.raise_(Action.RAISE_POT)
         bonus = self.brain.image.call_bonus(p, self.brain.profiler.profile, self.brain.opponent)
         if eq >= self.call_odds(ctx) + p["post_call_margin"] - bonus:
             return ctx.call()
@@ -122,6 +137,51 @@ class Strategy:
         span = max(1e-6, p["thin_river_full"] - p["thin_river_from"])
         scale = min(1.0, max(0.0, (rate.value - p["thin_river_from"]) / span))
         return p["thin_river_shift"] * scale
+
+    def river_value(self, ctx: Ctx):
+        """Value-bet the river against the hands that actually call us.
+
+        Showdowns of called river bets give the bottom of their calling
+        range; a value bet pays when we beat that range more often than
+        `river_value_need`. Returns None (no opinion), 0 (check), 1 (bet
+        half pot) or 2 (bet pot)."""
+        p, sd = self.p, self.brain.showdowns
+        if not p["river_value_range"] or len(sd.river_call_strengths) < p["river_call_min"]:
+            return None
+        n = self.brain.samples(ctx)
+        if n <= 0:
+            return None
+        floor = sd.river_call_floor()
+        weight = ranges.postflop_weight(ctx.obs.board, self.opponent_preflop_floor(ctx), floor,
+                                        softness=0.08)
+        eq_called = self.brain.equity(ctx.obs.hole_cards, ctx.obs.board, n, weight)
+        if eq_called < p["river_value_need"]:
+            return 0
+        return 2 if eq_called >= p["post_pot_size_eq"] else 1
+
+    def river_bluff(self, ctx: Ctx, eq: float):
+        """Bluff air on the river when the opponent's measured fold rate to
+        our river bets pays for it. A half-pot bet risks 0.5 to win 1 (needs
+        33% folds), a pot bet risks 1 to win 1 (needs 50%); we also give up
+        our showdown equity. Stations never clear the bar, so this switches
+        itself off against them."""
+        p, opp = self.p, self.brain.opponent
+        if not p["river_bluff_adapt"] or eq > p["river_bluff_max_eq"]:
+            return None
+        best, best_edge = None, p["river_bluff_margin"]
+        for action, rate, risk in ((Action.RAISE_HALF, opp.river_fold_half, 0.5),
+                                   (Action.RAISE_POT, opp.river_fold_pot, 1.0)):
+            if rate.total < p["river_bluff_min_obs"]:
+                continue
+            f = rate.value
+            edge = f - (1 - f) * risk - eq
+            if edge > best_edge:
+                best, best_edge = action, edge
+        if best is None:
+            return None
+        if self.brain.rng.random() < p["river_bluff_adapt"] * self.brain.image.bluff_scale(p):
+            return best
+        return None
 
     def call_odds(self, ctx: Ctx) -> float:
         """Equity needed to call before the river. An opponent that keeps
@@ -142,6 +202,19 @@ class Strategy:
         if eq >= ctx.allin_odds:
             return ctx.call()
         return ctx.fold()
+
+    def draw_raise(self, ctx: Ctx, eq: float) -> bool:
+        """Semi-bluff raise a flop/turn bet with a real draw against a
+        frequent bettor: their range is wide, so the raise often wins the
+        pot now, and the draw keeps equity when called."""
+        p = self.p
+        if not p["draw_raise"] or ctx.street == Street.RIVER or eq < p["semi_bluff_min_eq"]:
+            return False
+        if self.brain.opponent.rate("aggression") < p["draw_raise_agg"]:
+            return False
+        if not has_draw(ctx.obs.hole_cards, ctx.obs.board):
+            return False
+        return self.brain.rng.random() < p["draw_raise"] * self.brain.image.bluff_scale(p)
 
     def should_bluff(self, ctx: Ctx, eq: float) -> bool:
         """Semi-bluff real draws before the river; rarely bluff air on the

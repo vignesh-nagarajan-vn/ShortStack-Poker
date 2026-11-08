@@ -27,7 +27,12 @@ MAX_SAMPLES = 1500
 
 
 class TimeBank:
-    def __init__(self, bank_seconds: float = 8.0, num_hands: int = 1000) -> None:
+    def __init__(self, bank_seconds: float = 8.0, num_hands: int = 1000,
+                 share: float = SHARE_FOR_LOGIC, max_samples: int = MAX_SAMPLES,
+                 clock=time.perf_counter) -> None:
+        self.clock = clock            # the simulator swaps in a deterministic clock
+        self.share = share
+        self.max_samples = int(max_samples)
         self.bank = bank_seconds
         self.num_hands = max(1, num_hands)
         self.spent = 0.0              # our own measured time
@@ -39,10 +44,10 @@ class TimeBank:
     # --- measuring ---------------------------------------------------------
 
     def begin(self) -> None:
-        self._t0 = time.perf_counter()
+        self._t0 = self.clock()
 
     def end(self, is_request: bool = True) -> float:
-        elapsed = time.perf_counter() - self._t0
+        elapsed = self.clock() - self._t0
         self.spent += elapsed
         if is_request:
             self.requests += 1
@@ -60,7 +65,7 @@ class TimeBank:
         return self.spent + self.requests * OVERHEAD_PER_REQUEST
 
     def remaining_logic(self) -> float:
-        return self.bank * SHARE_FOR_LOGIC - self.spent
+        return self.bank * self.share - self.spent
 
     def allowance(self, hand_index: int) -> float:
         """Seconds we may spend on this decision."""
@@ -77,4 +82,4 @@ class TimeBank:
         n = int(self.allowance(hand_index) / max(self.cost_per_sample, 1e-7))
         if n < MIN_SAMPLES:
             return 0
-        return min(MAX_SAMPLES, n)
+        return min(self.max_samples, n)

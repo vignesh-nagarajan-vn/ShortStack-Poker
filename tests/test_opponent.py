@@ -97,3 +97,41 @@ def test_thin_river_shift_scales_with_called_bet_win_rate():
         r2.add(i % 2 == 0)                               # coin flip: no shift
     brain.opponent.river_called_wins = r2
     assert brain.strategy.thin_river_shift() == 0.0
+
+
+def test_river_fold_rates_split_by_bet_size():
+    from game import Action, HandResult, Street
+    from bot.opponent import OpponentModel, Step
+
+    m = OpponentModel()
+    pre = [Step(Street.PREFLOP, False, Action.CHECK_CALL), Step(Street.PREFLOP, True, Action.CHECK_CALL)]
+    half_fold = [Step(Street.RIVER, False, Action.CHECK_CALL), Step(Street.RIVER, True, Action.RAISE_HALF),
+                 Step(Street.RIVER, False, Action.FOLD)]
+    pot_call = [Step(Street.RIVER, False, Action.CHECK_CALL), Step(Street.RIVER, True, Action.RAISE_POT),
+                Step(Street.RIVER, False, Action.CHECK_CALL)]
+    res = HandResult(hand_index=0, my_net=0, pot=40, went_to_showdown=False, board=(), opp_hole=None,
+                     winner="me")
+    m.observe_hand(pre + half_fold, res)
+    m.observe_hand(pre + pot_call, res)
+    assert (m.river_fold_half.total, m.river_fold_half.hits) == (1, 1)
+    assert (m.river_fold_pot.total, m.river_fold_pot.hits) == (1, 0)
+
+
+def test_river_bluff_needs_a_paying_fold_rate():
+    from bot.core import Brain
+    from game import AgentConfig
+
+    brain = Brain(AgentConfig(), {"river_bluff_adapt": 1.0})
+    s, opp = brain.strategy, brain.opponent
+
+    class FakeCtx:
+        pass
+
+    assert s.river_bluff(FakeCtx(), 0.05) is None          # no evidence yet
+    for _ in range(40):
+        opp.river_fold_half.add(True)                       # folds to every half-pot bet
+    assert s.river_bluff(FakeCtx(), 0.05) is not None
+    assert s.river_bluff(FakeCtx(), 0.60) is None          # not air: never a bluff
+    for _ in range(200):
+        opp.river_fold_half.add(False)                      # now a station
+    assert s.river_bluff(FakeCtx(), 0.05) is None

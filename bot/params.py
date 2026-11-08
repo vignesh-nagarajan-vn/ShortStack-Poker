@@ -33,6 +33,10 @@ DEFAULTS = {
     "thin_river_from": 0.70,     # our called river bets winning this often starts the drop...
     "thin_river_full": 0.85,     # ...and this often applies all of it
     "thin_river_min": 10,        # called river bets seen before it can apply
+    "thin_river_raise": 0.0,     # 1 = also lower the river raise bar by the same shift
+    "river_value_range": 0.0,    # 1 = value-bet the river by equity vs their learned calling range
+    "river_value_need": 0.55,    # ...betting when we win at least this often once called
+    "river_call_min": 8,         # showdowns of called river bets needed before it applies
     "post_pot_size_eq": 0.75,    # bet/raise pot (not half) above this
     "post_raise_eq": 0.68,       # raise a bet (tuned from 0.72)
     "post_call_margin": 0.00,    # extra equity over pot odds to call
@@ -56,6 +60,16 @@ DEFAULTS = {
     "semi_bluff_freq": 0.50,     # how often we bet a qualifying draw when checked to
     "river_bluff_freq": 0.06,    # bet air on the river in position when checked to
     "river_bluff_max_eq": 0.25,
+    "draw_raise": 0.0,           # chance to raise a bet with a real draw (flop/turn)...
+    "draw_raise_agg": 0.0,       # ...when their postflop aggression rate is at least this
+    "river_bluff_adapt": 0.0,    # chance to bluff air when their measured river fold rate pays
+    "river_bluff_margin": 0.05,  # edge (in pots) the measured fold rate must clear
+    "river_bluff_min_obs": 12,   # river bets they faced (per size) before trusting the rate
+    # --- time and autopilot ----------------------------------------------
+    "logic_share": 0.45,         # share of the 8 s bank our own code may spend
+    "mc_max_samples": 1500,      # cap on Monte Carlo samples per decision
+    "autopilot_streak": 10,      # default actions in a row that mean "out of time"
+    "autopilot_min_folds": 4,    # ...including this many folds to a bet
 }
 
 

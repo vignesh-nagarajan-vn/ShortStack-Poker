@@ -22,7 +22,8 @@ MIN_FOLDS = 4
 
 
 class AutopilotDetector:
-    def __init__(self) -> None:
+    def __init__(self, streak: int = STREAK, min_folds: int = MIN_FOLDS) -> None:
+        self.need_streak, self.need_folds = streak, min_folds
         self.streak = 0
         self.folds = 0
         self.active = False
@@ -39,7 +40,7 @@ class AutopilotDetector:
             else:
                 self.streak, self.folds = 0, 0
                 self.active = False
-        if not self.active and self.streak >= STREAK and self.folds >= MIN_FOLDS:
+        if not self.active and self.streak >= self.need_streak and self.folds >= self.need_folds:
             self.active = True
             self.triggers += 1
 

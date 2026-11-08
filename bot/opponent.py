@@ -72,6 +72,9 @@ class OpponentModel:
     # Share of our called river bets that won at showdown. Kept apart from
     # `rates` so profile classification and mode-shift checks ignore it.
     river_called_wins: Rate = field(default_factory=lambda: Rate(0.65))
+    # How often they fold to our river bets, by size (a raise counts as no fold).
+    river_fold_half: Rate = field(default_factory=lambda: Rate(0.30))
+    river_fold_pot: Rate = field(default_factory=lambda: Rate(0.35))
 
     # ---- feeding ---------------------------------------------------------
 
@@ -117,6 +120,7 @@ class OpponentModel:
                 r["fold_to_bet"].add(s.action == Action.FOLD)
         if any(s.street != Street.PREFLOP for s in steps) or result.went_to_showdown:
             r["wtsd"].add(result.went_to_showdown)
+        self._river_folds(steps)
         if result.went_to_showdown and self._called_our_river_bet(steps):
             self.river_called_wins.add(result.winner == "me")
         if result.went_to_showdown and result.opp_hole:
@@ -142,6 +146,13 @@ class OpponentModel:
             if prev.is_me:
                 return prev.action in RAISES
         return False
+
+    def _river_folds(self, steps: list[Step]) -> None:
+        river = [s for s in steps if s.street == Street.RIVER]
+        for mine, theirs in zip(river, river[1:]):
+            if mine.is_me and mine.action in RAISES and not theirs.is_me:
+                rate = self.river_fold_half if mine.action == Action.RAISE_HALF else self.river_fold_pot
+                rate.add(theirs.action == Action.FOLD)
 
     @staticmethod
     def _called_our_river_bet(steps: list[Step]) -> bool:

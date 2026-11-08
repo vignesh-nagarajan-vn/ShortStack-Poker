@@ -34,6 +34,7 @@ class ShowdownLearner:
         self.call_pcts: list[float] = []
         self.bet_strengths: list[float] = []
         self.raise_strengths: list[float] = []
+        self.river_call_strengths: list[float] = []   # hands that called our river bets
 
     def strength_percentile(self, hole, board) -> float:
         """Made-hand strength of `hole` on `board` vs random hands."""
@@ -59,6 +60,14 @@ class ShowdownLearner:
                 continue
             strength = self.strength_percentile(opp_hole, board[:size])
             (self.raise_strengths if len(acts) >= 2 else self.bet_strengths).append(strength)
+
+    def add_river_call(self, opp_hole, board) -> None:
+        """They called our river bet and showed this hand."""
+        self.river_call_strengths.append(self.strength_percentile(opp_hole, board))
+
+    def river_call_floor(self, prior: float = 0.5, q: float = 0.2) -> float:
+        """Made-hand strength at the bottom of their river calling range."""
+        return self._blend(self.river_call_strengths, prior, q=q)
 
     @staticmethod
     def _blend(samples: list[float], prior: float, prior_weight: float = 8.0, q: float = 0.2) -> float:

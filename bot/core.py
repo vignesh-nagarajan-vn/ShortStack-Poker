@@ -32,17 +32,23 @@ PARAM_OVERRIDES: dict = {}
 class Brain:
     """All state for one half-match."""
 
-    def __init__(self, config: AgentConfig, overrides: dict | None = None) -> None:
+    def __init__(self, config: AgentConfig, overrides: dict | None = None, clock=None) -> None:
         self.config = config
+        # Real play times itself with perf_counter. The simulator can pass a
+        # virtual clock (sim.players.VirtualClock) so that A/B tests are
+        # deterministic instead of depending on machine load.
+        self.clock = clock or time.perf_counter
         self.params = params_mod.make(overrides if overrides is not None else PARAM_OVERRIDES)
         self.hands_seen = 0
-        self.timebank = TimeBank(config.time_bank_seconds, config.num_hands)
+        self.timebank = TimeBank(config.time_bank_seconds, config.num_hands,
+                                 self.params["logic_share"], self.params["mc_max_samples"], self.clock)
         self.engine = EquityEngine(seed=20261107)
         self.rng = random.Random(1107)
         self.opponent = OpponentModel()
         self.showdowns = ShowdownLearner(seed=7)
         self.profiler = Profiler(self.params)
-        self.autopilot = AutopilotDetector()
+        self.autopilot = AutopilotDetector(int(self.params["autopilot_streak"]),
+                                           int(self.params["autopilot_min_folds"]))
         self.image = SelfImage()
         self._hand_index = -1
         self._history = ()
@@ -58,9 +64,11 @@ class Brain:
         return n
 
     def equity(self, hole, board, n: int, weight_fn=None) -> float:
-        start = time.perf_counter()
+        start = self.clock()
         eq = self.engine.equity(hole, board, n, weight_fn)
-        self.timebank.record_samples(n, time.perf_counter() - start)
+        if hasattr(self.clock, "charge_samples"):
+            self.clock.charge_samples(n)
+        self.timebank.record_samples(n, self.clock() - start)
         return eq
 
     # --- entry points --------------------------------------------------
@@ -98,6 +106,8 @@ class Brain:
             we_raised = any(s.is_me and s.street == 0 and s.action in RAISES for s in steps)
             self.showdowns.add(result.opp_hole, result.board, [s for s in steps if not s.is_me],
                                we_raised)
+            if self.params["river_value_range"] and OpponentModel._called_our_river_bet(steps):
+                self.showdowns.add_river_call(result.opp_hole, result.board)
         if self.params.get("exploit", 1.0) and self.profiler.update(self.opponent):
             self.strategy.p = self.profiler.params
 
