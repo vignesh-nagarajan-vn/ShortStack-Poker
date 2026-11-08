@@ -426,6 +426,13 @@ class Strategy:
         # Facing one or more raises.
         floor = self.range_floor(opp_raises)
         margin = p["pre_call_margin_ip"] if ctx.in_position else p["pre_call_margin_oop"]
+        if not ctx.in_position and p["bb_call_adapt"]:
+            # A call out of position wins after the flop either at showdown or
+            # by betting them off the pot. Against an opponent that rarely
+            # folds to our flop bets only showdown is left, so ask for more
+            # equity (jish_4 folds 18%, PLO5-MCCFR 38%, Drew's bot 48%).
+            fold = self.brain.opponent.spot_fold[1].value
+            margin += min(p["bb_call_cap"], p["bb_call_adapt"] * max(0.0, p["bb_call_ref"] - fold))
         if not p["adaptive_samples"]:
             marks = ()
         elif ctx.committed_after_call(p["commit_ratio"]):

@@ -18,6 +18,9 @@ DEFAULTS = {
     "pre_reraise_equity": 0.57,  # equity vs their range needed to re-raise
     "pre_call_margin_oop": 0.03, # extra equity over pot odds when out of position
     "pre_call_margin_ip": 0.00,
+    "bb_call_adapt": 0.0,        # >0: raise the out-of-position call margin by this x (bb_call_ref - their fold rate to our flop bets)
+    "bb_call_ref": 0.50,         # ...fold rate at which no extra margin is asked
+    "bb_call_cap": 0.10,         # ...largest extra margin
     # --- postflop: reading the opponent's range ----------------------
     "range_floor_call": 0.25,    # opponent called a preflop raise: drop their worst hands
     "agg_bet": 0.40,             # one bet this street = made-hand strength above this share
