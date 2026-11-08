@@ -654,26 +654,65 @@ only pays when we can win after the flop, so `bb_call_adapt` adds
 `bb_call_adapt x (bb_call_ref - their flop fold rate)` to the
 out-of-position margin, capped at `bb_call_cap`.
 
+Sim (seeds 101-116): `bb_call_adapt=0.5` jish_4 +0.35, PLO5 +0.08, Drew
+-0.04, but range_pro -0.16, range_aggro -0.15 (both deterministic, so
+real; still won by +1.3 and +1.7). Docker, seeds 11-18:
+
+| Opponent | Defaults | `bb_call_adapt=0.5` | Diff (se) | Points of 8 |
+|---|---|---|---|---|
+| jish_4 | -1.03 | -0.60 | +0.43 (0.09) | 0.0 -> 2.0 |
+| PLO5-MCCFR | -0.61 | -0.67 | -0.06 (0.11) | 3.0 -> 2.0 |
+| Drew's sdplo_v5 | +0.67 | +0.53 | -0.14 (0.09) | 6.5 -> 5.0 |
+| Drew's sdplo_v4 | +0.66 | +0.62 | -0.04 (0.11) | 6.0 -> 6.0 |
+
+Turning the means into expected match points (95% CI half-width 0.5,
+so se ~0.255 per match), the adaptive margin is worth ~0.0 points over
+these four opponents and the fixed 0.10 ~+0.1: both swap likely wins
+against Drew-level bots for fewer losses against the top two. Neither
+is a default; both stay available. Across the three Docker runs of the
+new defaults the results held steady: jish_4 -0.87 / -1.06 / -1.03,
+PLO5-MCCFR -0.54 / -0.61 / -0.61, Drew +0.67 to +0.78.
+
+### Against maniacs, and a league check (build bfa5d5f)
+
+The pool league in the Linux image (seeds 1-3, real clock, so margins
+run lower than on the Windows host) found one cost of the new defaults:
+betting from 52% equity bets medium hands into bots that raise
+everything, and they get raised off them (always-half +3.56 -> +2.25,
+one chop). In the maniac profile, `maniac_bet_eq=0.68` puts the bar back
+up and lets them bluff into us. Sim, seeds 101-108: barreler +0.41,
+random +0.34, maniac +0.17, always-pot +0.14; jish_4 -0.02, the range
+bots 0.00. Kept.
+
+| League, Linux image, seeds 1-3 | Old defaults | New defaults |
+|---|---|---|
+| 22 non-self pool bots (66 matches) | 62 W, 4 chops | **65 W, 1 chop** |
+| range_pro / range_aggro | +0.60 / +0.68 | **+1.08 / +1.00** (all wins) |
+
+The one chop is variance against always-pot (+1.43, CI -0.24 to +3.09).
+`tools/check_build.sh` passes on this build (14 MB over the base).
+
 ## What to try next
 
-Done since the last list: the preflop re-tune (batch 8, nothing beat the
-current thresholds), `river_value_range` with a looser prior and
-`draw_raise` (both clearly negative, batch 8), and the cheaper equity call
-(kept, though extra samples turned out to be worth only about +0.05).
+Done since the last list: PLO5-MCCFR and jish_4 diffs and Docker
+validation, `freq_ranges`, the maniac fold-rate condition, pot-size
+small-blind opens, betting from 52%; tested and left off: raise-bluffs,
+lower `barrel_weight`, tighter or adaptive big-blind calls, bet sizing.
 
-* **CsaBest's PLO5-MCCFR** beats ShortStack by 0.8-0.9 bb/deal. The diff
-  points at two fixes: raise far more small blinds instead of limping
-  (it opens 75% half-pot), and defend more against postflop bets (we fold
-  69-88% and its bluffs take the pot 65-81% of the time).
-* **Drew's bot** was the closest opponent: at 1 CPU with its bank intact the
-  Docker matches are mostly chops in our favour (+0.32 mean), and with 3x
-  the thinking time (`x_drew_fast`) it beats ShortStack by 0.7-1.0 bb/deal. It bets most flops and
-  sizes its bluffs to our measured fold rate; we fold 68% of flop bets and
-  give up the best hand on a third of those folds. The minimum-defense
-  option (`defend_gain`) is the first answer being tested; bet sizing and
-  check-raising against its flop bets are the next.
-* Judge A/B results on the opponents where the A/A arm is exactly 0, and
-  run batches against real-clock bots (`x_drew_*`, `mc_careful`) with fewer
-  workers, or through Docker.
+* **jish_4 (-0.9 to -1.1) and PLO5-MCCFR (-0.5 to -0.6)** still win. Both
+  diffs now say we call too wide in the big blind (we call 84-93% of
+  small-blind raises; PLO5-MCCFR folds 50% there, jish_4 38%) and fold too
+  much after the flop. Every fixed tightening so far trades margin
+  against Drew-level bots for less loss against these two
+  (`pre_call_margin_oop=0.10`, `bb_call_adapt=0.5`: ~0 to +0.1 expected
+  points over the four). A real fix probably needs better postflop play
+  in called pots, not a narrower range.
+* jish_4 adapts to frequency: once we bet more it raised 35% of our flop
+  bets and folded only 18%. Anything that exploits it by frequency gets
+  read and countered within a half (raise-bluffs lost 0.42). Balance,
+  not exploitation, is the lever against it.
+* Wall-clock bots (PLO5-MCCFR, jish_4, Drew's) need `--no-cache` and an
+  A/A arm in every sim batch, and Docker for any decision closer than
+  ~0.3 bb/deal. Run at most two Docker matches at once.
 * Make `adaptive_loose` stop losing to `learn_postflop` (the one consistent
   negative).
