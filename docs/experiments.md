@@ -597,6 +597,63 @@ PLO5-MCCFR (`defend_agg=0.30`), pot opens from 0.30, betting from 0.50
 with every draw. None moved any opponent by more than noise; the
 parameters are at a local optimum and the next gains need new behaviour.
 
+Diffing the new defaults' Docker logs (8 seeds each): vs jish_4 (-0.87)
+the biggest first divergence is the big blind checking the flop where
+jish_4 leads (n=2427, -0.58 bb/deal), and hands we fold after the flop
+still cost -3.8 bb/deal (+1.9 back from its folds). Vs PLO5-MCCFR
+(-0.54) it is preflop: in the big blind we call 90% of raises (it folds
+49%), then fold 72% to flop bets. Both diffs say the same thing: we call
+too much before the flop and fold too much after it.
+
+Cycle 1, structural (seeds 101-116, A/A within 0.07):
+
+| Candidate | jish_4 | PLO5 | Drew | Others |
+|---|---|---|---|---|
+| `raise_bluff_adapt=1` (new: raise a flop/turn bet we would fold when their measured fold-to-raise pays) | **-0.42** | -0.18 | -0.20 | barreler +0.18 |
+| same, looser (min eq 0.10, 3 obs) | -0.41 | -0.19 | -0.15 | |
+| `pre_call_margin_oop=0.06` | +0.15 | -0.11 | -0.28 | adaptive -0.14 |
+| `pre_call_margin_oop=0.10` | +0.33 | -0.06 | -0.14 | adaptive -0.15 |
+
+The raise-bluff backfires: jish_4 discounts the strength of an action
+the more often its opponent takes it, so once we raise often it calls
+and re-raises. Left off.
+
+Cycle 2 (seeds 101-116). The high flop calling bar against jish_4 comes
+from `call_odds`: against 0.80 aggression, `barrel_weight` puts the flop
+price at ~96% of the way to all-in odds. Lowering it was the obvious
+test:
+
+| Candidate | jish_4 | PLO5 | Drew | Others |
+|---|---|---|---|---|
+| A/A | -0.04 | -0.08 | -0.22 | |
+| `barrel_weight=0.4` | -0.12 | -0.06 | -0.06 | |
+| `barrel_weight=0.2` | -0.18 | 0.00 | +0.02 | adaptive -0.36 |
+| `barrel_weight=0.0` | **-0.61** | -0.06 | -0.19 | adaptive -0.33 |
+| `pre_call_margin_oop=0.10` | +0.22 | +0.01 | -0.25 | adaptive -0.15 |
+| `post_pot_size_eq=0.85` | -0.15 | -0.06 | -0.14 | |
+| `post_pot_size_eq=0.65` | +0.12 | -0.03 | -0.16 | mc_careful +0.16, barreler -0.19 |
+
+jish_4 really does keep betting, so the barrel price is right: folding
+the flop is cheaper than calling and folding the turn. The tighter big
+blind (+0.33 and +0.22 vs jish_4 in two runs) went to Docker.
+
+Docker, seeds 11-18, new defaults vs `pre_call_margin_oop=0.10`:
+
+| Opponent | Defaults | 0.10 | Diff (se) | Points of 8 |
+|---|---|---|---|---|
+| jish_4 | -1.06 | -0.62 | +0.43 (0.20) | 1.0 -> 2.5 |
+| PLO5-MCCFR | -0.61 | -0.39 | +0.22 (0.08) | 2.5 -> 4.0 |
+| Drew's sdplo_v5 | +0.70 | +0.54 | -0.16 (0.10) | 6.0 -> 5.0 |
+| Drew's sdplo_v4 | +0.73 | +0.57 | -0.16 (0.05) | 6.5 -> 5.5 |
+
++1 point net, but it trades margin against a bot we beat for less loss
+against the two that beat us. What separates them: when we bet the flop,
+Drew's bots fold 48%, PLO5-MCCFR 38%, jish_4 18% (and jish_4 now raises
+35% of our flop bets: it adapted to the extra betting). A big-blind call
+only pays when we can win after the flop, so `bb_call_adapt` adds
+`bb_call_adapt x (bb_call_ref - their flop fold rate)` to the
+out-of-position margin, capped at `bb_call_cap`.
+
 ## What to try next
 
 Done since the last list: the preflop re-tune (batch 8, nothing beat the
