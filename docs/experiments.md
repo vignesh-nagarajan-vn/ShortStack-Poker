@@ -401,15 +401,19 @@ bot that keeps its bank is the match ShortStack would lose.
 
 ## What to try next
 
-* Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
-  `pre_reraise_equity`, `pre_call_margin_oop`, `commit_ratio`) against the
-  new pool, now that A/B noise is low enough to see 0.05 bb/deal.
-* `river_value_range` with a looser calling-floor prior (0.3 instead of 0.5)
-  and fewer showdowns needed, so stations stop being under-bet.
-* Draw semi-bluff raises vs frequent bettors (`draw_raise`, wired up but
-  not yet tested).
-* Cut the fixed 0.35 ms cost of each equity call (vectorize the preflop
-  percentile and made-strength weights), which turns straight into samples;
-  batch 6 shows samples are worth about 0.25 bb/deal per 0.1 of `logic_share`.
+Done since the last list: the preflop re-tune (batch 8, nothing beat the
+current thresholds), `river_value_range` with a looser prior and
+`draw_raise` (both clearly negative, batch 8), and the cheaper equity call
+(kept, though extra samples turned out to be worth only about +0.05).
+
+* **Drew's bot with a full time bank** (`x_drew_fast`) is the one opponent
+  that beats ShortStack (-0.7 to -1.0 bb/deal). It bets most flops and
+  sizes its bluffs to our measured fold rate; we fold 68% of flop bets and
+  give up the best hand on a third of those folds. The minimum-defense
+  option (`defend_gain`) is the first answer being tested; bet sizing and
+  check-raising against its flop bets are the next.
+* Judge A/B results on the opponents where the A/A arm is exactly 0, and
+  run batches against real-clock bots (`x_drew_*`, `brown`) with fewer
+  workers, or through Docker.
 * Make `adaptive_loose` stop losing to `learn_postflop` (the one consistent
   negative).
