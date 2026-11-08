@@ -46,3 +46,19 @@ def test_virtual_clock_brain_skips_the_probe():
     from sim.players import VirtualClock
     assert Brain(AgentConfig(), clock=VirtualClock()).timebank.probes == []
     assert len(Brain(AgentConfig()).timebank.probes) == 1
+
+
+def test_pot_weighting_shifts_samples_to_big_pots():
+    flat = TimeBank(8.0, 1000)
+    weighted = TimeBank(8.0, 1000, pot_exponent=0.667)
+    assert flat.samples(0, pot=100) == flat.samples(0, pot=4) == flat.samples(0)
+    big, small = weighted.samples(0, pot=100), weighted.samples(0, pot=4)
+    assert small < flat.samples(0) < big
+    # the scale is clipped, and an average pot gets about the flat allowance
+    assert 0.35 <= weighted.pot_scale(1) and weighted.pot_scale(10 ** 6) <= 3.0
+
+
+def test_pot_weighting_never_thinks_on_an_empty_bank():
+    tb = TimeBank(8.0, 1000, pot_exponent=0.667)
+    tb.spent = 8.0
+    assert tb.samples(500, pot=160) == 0

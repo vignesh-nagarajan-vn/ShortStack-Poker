@@ -41,7 +41,8 @@ class Brain:
         self.params = params_mod.make(overrides if overrides is not None else PARAM_OVERRIDES)
         self.hands_seen = 0
         self.timebank = TimeBank(config.time_bank_seconds, config.num_hands,
-                                 self.params["logic_share"], self.params["mc_max_samples"], self.clock)
+                                 self.params["logic_share"], self.params["mc_max_samples"], self.clock,
+                                 pot_exponent=self.params["pot_exponent"])
         self.engine = EquityEngine(seed=20261107)
         self.rng = random.Random(1107)
         self.opponent = OpponentModel()
@@ -76,7 +77,7 @@ class Brain:
     # --- services used by the strategy ---------------------------------
 
     def samples(self, ctx: Ctx) -> int:
-        n = self.timebank.samples(ctx.obs.hand_index)
+        n = self.timebank.samples(ctx.obs.hand_index, ctx.pot + min(ctx.to_call, ctx.obs.my_stack))
         headroom = FALLBACK_HEADROOM * self.timebank.load_scale()
         if n == 0 and self.timebank.charged_estimate() < self.timebank.bank - headroom:
             n = 40   # logic share used up, but the bank itself is fine: cheap estimate

@@ -35,12 +35,22 @@ MAX_SAMPLES = 1500
 REF_PROBE_SECONDS = 0.0012    # measured 0.95-1.15 ms; 1.2 leaves headroom for noise
 PROBE_EVERY = 100
 MAX_LOAD_SCALE = 4.0
+# Pot weighting: a mistake costs in proportion to the pot, and Monte Carlo
+# error falls as 1/sqrt(samples), so the total cost of errors for a fixed
+# number of samples is smallest with samples proportional to pot^(2/3).
+# Each decision's allowance is scaled by (pot^e / running mean of pot^e),
+# clipped; the mean of the scale stays near 1, so the half's total spend
+# is unchanged and allowance() keeps correcting from what is left.
+POT_SCALE_MIN = 0.35
+POT_SCALE_MAX = 3.0
+POT_PRIOR_N = 20              # pseudo-decisions behind the running mean...
+POT_PRIOR_CHIPS = 12.0        # ...at this pot size
 
 
 class TimeBank:
     def __init__(self, bank_seconds: float = 8.0, num_hands: int = 1000,
                  share: float = SHARE_FOR_LOGIC, max_samples: int = MAX_SAMPLES,
-                 clock=time.perf_counter) -> None:
+                 clock=time.perf_counter, pot_exponent: float = 0.0) -> None:
         self.clock = clock            # the simulator swaps in a deterministic clock
         self.share = share
         self.max_samples = int(max_samples)
@@ -51,6 +61,9 @@ class TimeBank:
         self.decisions = 0
         self.cost_per_sample = 4e-6   # refined from measurements
         self.probes: list = []        # recent probe timings (seconds)
+        self.pot_exponent = pot_exponent
+        self._pot_sum = POT_PRIOR_N * POT_PRIOR_CHIPS ** pot_exponent
+        self._pot_n = float(POT_PRIOR_N)
         self._t0 = 0.0
 
     # --- measuring ---------------------------------------------------------
@@ -100,9 +113,22 @@ class TimeBank:
             return 0.0
         return min(HARD_CAP_SECONDS, remaining / (hands_left * per_hand))
 
-    def samples(self, hand_index: int) -> int:
+    def pot_scale(self, pot: float | None) -> float:
+        """How much of an average decision's allowance this pot deserves."""
+        if pot is None or self.pot_exponent <= 0:
+            return 1.0
+        x = max(1.0, float(pot)) ** self.pot_exponent
+        self._pot_sum += x
+        self._pot_n += 1
+        return min(POT_SCALE_MAX, max(POT_SCALE_MIN, x * self._pot_n / self._pot_sum))
+
+    def samples(self, hand_index: int, pot: float | None = None) -> int:
         """Monte Carlo samples affordable now (0 = use table-only play)."""
-        n = int(self.allowance(hand_index) / max(self.cost_per_sample, 1e-7))
+        allowance = self.allowance(hand_index)
+        if allowance <= 0:
+            return 0
+        allowance = min(HARD_CAP_SECONDS, allowance * self.pot_scale(pot))
+        n = int(allowance / max(self.cost_per_sample, 1e-7))
         if n < MIN_SAMPLES:
             return 0
         return min(self.max_samples, n)

@@ -180,6 +180,19 @@ faster too (0.76x, interleaved), so `REF_PROBE_SECONDS` moved from 1.6 ms
 to 1.2 ms (idle laptop: 1.07-1.26 ms, load scale 1.00-1.05). Real clock
 afterwards: 4.6 s charged per half, 0 errors, as before.
 
+### Batch 7: what the extra samples are worth (seeds 101-108)
+
+| Candidate | Pool diff (all) | Field diff | Notes | Verdict |
+|---|---|---|---|---|
+| old engine cost (`vc_per_call=0.00045, vc_per_sample=4.5e-6`) | -0.035 | **-0.079** (z -2.2) | so the speedup is worth about +0.04 to +0.08 | speedup **KEPT** |
+| `pot_exponent=0.667` (samples in proportion to pot^(2/3)) | +0.009 | -0.008 | | reject |
+| `pot_exponent=0.667, mc_max_samples=3000` | -0.008 | -0.025 | | reject |
+| `mc_max_samples=3000` | -0.010 | -0.004 | identical play against 26 of 33 bots: the 1,500 cap almost never binds | reject |
+
+Extra samples have diminishing returns: cutting `logic_share` from 0.45 to
+0.35 cost 0.25 bb/deal (batch 6), but 1.8x more samples on top of the
+current budget adds only about 0.05.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
