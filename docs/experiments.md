@@ -425,6 +425,26 @@ self variants. It does **not** fix the match against Drew's bot with a full
 time bank: every arm is within that bot's A/A noise, and the base lost to
 it by -0.86 bb/deal on these seeds.
 
+### Final Docker matches vs Drew's sdplo_v4 and sdplo_v5 (build 33977a2)
+
+The final build (river bluffs, wider defense and per-street levels on)
+against both of Drew's latest versions, same container setup and seeds as
+the first Docker run. This time Drew's bot kept its time bank in every
+half (6.6-7.5 s of 8 s), so these are full-strength matches.
+
+| Seed | vs sdplo_v5 (9f0857d) | vs sdplo_v4 (c0b0a6a) | Earlier build 12ac2aa vs v4 |
+|---|---|---|---|
+| 11 | +0.58 chop (-0.01 to +1.17) | **+0.63 win** (+0.07 to +1.19) | +1.23 win (Drew's bank empty) |
+| 12 | +0.12 chop | 0.00 chop | +1.21 win (bank empty) |
+| 13 | +0.10 chop | +0.12 chop | +0.73 win (bank empty) |
+| 14 | **+0.63 win** (+0.02 to +1.23) | +0.36 chop | +0.17 chop (bank kept) |
+
+2 wins and 6 chops, every margin zero or positive (mean +0.32 bb/deal),
+0 errors, ShortStack at 5.3-5.9 s of 8 s. Seed 14 vs v4, the one match
+where Drew's bot kept its bank both times, went from +0.17 to +0.36.
+`x_drew_fast` (-1.0 in-process) overstates Drew's bot: it gets 3x the
+thinking time it actually has on 1 CPU.
+
 ## What to try next
 
 Done since the last list: the preflop re-tune (batch 8, nothing beat the
@@ -432,8 +452,9 @@ current thresholds), `river_value_range` with a looser prior and
 `draw_raise` (both clearly negative, batch 8), and the cheaper equity call
 (kept, though extra samples turned out to be worth only about +0.05).
 
-* **Drew's bot with a full time bank** (`x_drew_fast`) is the one opponent
-  that beats ShortStack (-0.7 to -1.0 bb/deal). It bets most flops and
+* **Drew's bot** is the closest opponent: at 1 CPU with its bank intact the
+  Docker matches are mostly chops in our favour (+0.32 mean), and with 3x
+  the thinking time (`x_drew_fast`) it beats ShortStack by 0.7-1.0 bb/deal. It bets most flops and
   sizes its bluffs to our measured fold rate; we fold 68% of flop bets and
   give up the best hand on a third of those folds. The minimum-defense
   option (`defend_gain`) is the first answer being tested; bet sizing and
