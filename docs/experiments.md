@@ -108,6 +108,37 @@ random hands was read as a top-44% hand by the river.
 | same, floor and step fade only above 50% aggression (`agg_prev_adapt=1`) | 101-104 | +0.117 | +0.179 | selective bettors unchanged to the chip | confirm |
 | `agg_prev_adapt=1` | **105-112** | **+0.119** (z 7.0) | **+0.177** | always_half +1.46, maniac +0.78, barreler_half +0.65, always_pot +0.48, random +0.41; worst mc_drain -0.09 | **KEEP** |
 
+### Drew's sdplo bot, measured (November 2026)
+
+`x_drew_real` is github.com/burnerdrew2-prog/tamu-heads-up-bot at c011492
+(Bayesian opponent ranges, EV over three raise sizes, load-scaled time guard).
+
+| Measurement | ShortStack | Drew's bot |
+|---|---|---|
+| Head-to-head in-process, 8 seeds | **8-0-0, +1.85 bb/deal** | 0-0-8 |
+| Head-to-head, real judge, fresh servers per half | **3 wins, 1 chop**: +1.22, +1.88, +1.38, +0.46 | ran out of time in 3 of 8 halves (41-173 calls skipped) |
+| Same 22-bot field, 3 seeds each | **65-1-0, +3.28** (before `agg_prev_adapt`); **66-0-0, +3.67** after | 58-4-4, +3.31; loses to `range_pro` 3/3 |
+| vs hyper-aggressive bots (always_half, maniac) | +5.1, +6.5 before; +7.0, +7.9 after | +11.9, +11.0 |
+| vs MC-threshold bots (mc_basic, brown, adaptive) | +3.1, +2.2, +3.1 | +1.2, +0.6, +1.8 |
+| Thinking time per half, real judge | 3.9-5.3 s | 5.7-8.0 s |
+
+The one transferable idea (read always-bettors as betting their range) is
+`agg_prev_adapt` above. Against Drew's bot itself it is neutral (-0.04,
+se 0.15, 8 seeds), and +0.15 against the real BrownBallers.
+
+### Batch 6: thinking budget
+
+| Candidate | Pool diff (all) | Field diff | Verdict |
+|---|---|---|---|
+| `logic_share=0.35` (from 0.45) | -0.245 | -0.297 | reject |
+| `logic_share=0.30` | -0.387 | -0.472 | reject |
+
+Samples are worth a lot, so 0.45 stays. It is not raised either: the time
+bank assumes 0.6 ms of judge overhead per request, and a machine about 2x
+slower than this laptop (about 1.2 ms per request) could empty the bank
+at 0.55. Cheaper equity calls (0.35 ms of each call is the weight function,
+not sampling) would buy samples without that risk.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
@@ -117,8 +148,8 @@ random hands was read as a top-44% hand by the river.
   and fewer showdowns needed, so stations stop being under-bet.
 * Draw semi-bluff raises vs frequent bettors (`draw_raise`, wired up but
   not yet tested).
-* More samples on big pots (`logic_share`, `mc_max_samples`), measured with
-  the virtual clock first, then checked on the real judge with the slow-machine
-  margin.
+* Cut the fixed 0.35 ms cost of each equity call (vectorize the preflop
+  percentile and made-strength weights), which turns straight into samples;
+  batch 6 shows samples are worth about 0.25 bb/deal per 0.1 of `logic_share`.
 * Make `adaptive_loose` stop losing to `learn_postflop` (the one consistent
   negative).
