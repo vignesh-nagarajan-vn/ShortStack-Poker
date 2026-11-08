@@ -115,7 +115,9 @@ def play_half(make_a: Factory, make_b: Factory, seed, half: int, num_deals: int 
                     st.first_error = st.first_error or f"act: {type(exc).__name__}: {exc}"
                     action = None
                 elapsed = clock() - start
-                st.time_seconds += elapsed + REQUEST_OVERHEAD
+                # A player built for a faster machine (sim.pool.fast_machine)
+                # is charged only part of its measured time.
+                st.time_seconds += elapsed * getattr(players[key], "time_scale", 1.0) + REQUEST_OVERHEAD
                 st.calls += 1
                 if elapsed > 1.0:
                     st.errors += 1

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 
 from sim import opponents as opp
 from sim.players import ROOT, BrainPlayer, agent_factory, class_factory, module_factory
@@ -54,6 +55,9 @@ def registry() -> dict:
     drew_path = os.environ.get("DREW_PATH", os.path.join(os.path.dirname(ROOT), "tamu-heads-up-bot"))
     if os.path.isfile(os.path.join(drew_path, "agent.py")):
         bots["x_drew_real"] = _external_factory(drew_path, "x_drew_real")
+        # The same bot on a machine 3x faster: it never runs out of time, as in
+        # the one container match (seed 14) where it kept its bank.
+        bots["x_drew_fast"] = fast_machine(bots["x_drew_real"], "x_drew_fast", 3.0)
     # Self-play: our own bot with features switched off, standing in for
     # earlier versions and for teams that build something close to us.
     for name, overrides in SELF_VARIANTS.items():
@@ -76,6 +80,21 @@ SELF_VARIANTS = {
     "self_tight": {"post_bet_eq": 0.65, "post_raise_eq": 0.78, "sb_fold_below": 0.25,
                    "pre_call_margin_oop": 0.06},
 }
+
+
+def fast_machine(factory, name: str, speedup: float):
+    """A bot as it would play on a machine `speedup` times faster: it is told
+    its bank is that much bigger and is charged that much less per second,
+    so it gets the same thinking per decision as on the fast machine."""
+
+    def make(config):
+        player = factory(replace(config, time_bank_seconds=config.time_bank_seconds * speedup))
+        player.time_scale = 1.0 / speedup
+        player.name = name
+        return player
+
+    make.label = name  # type: ignore[attr-defined]
+    return make
 
 
 def _external_factory(repo: str, name: str):
