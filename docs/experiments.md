@@ -330,6 +330,17 @@ also only pays when Drew's bot keeps its bank; when it empties its bank
 Worth a recheck with more Drew seeds if a fast tournament machine is
 confirmed.
 
+### Batch 8 confirmation: `post_pot_size_eq=0.70` (seeds 105-108, whole pool)
+
+| Candidate | Pool | Field | range_pro | range_aggro | brown | Worst field | Verdict |
+|---|---|---|---|---|---|---|---|
+| `post_pot_size_eq=0.70` | +0.018 (z 0.5) | +0.021 | -0.200 | -0.183 | +0.219 | mc_loose -0.673 | **reject** |
+
+The screen's +0.12 to +0.17 against the three strongest bots did not
+repeat on fresh seeds; it was most likely the unlucky base run batch 8
+suspected. Not run against Drew's bot, since it already fails on the
+closest pool bots.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,
