@@ -439,6 +439,63 @@ where Drew's bot kept its bank both times, went from +0.17 to +0.36.
 `x_drew_fast` (-1.0 in-process) overstates Drew's bot: it gets 3x the
 thinking time it actually has on 1 CPU.
 
+### Docker match vs CsaBest's PLO5-MCCFR (build 33977a2)
+
+Another team's image, `fjdanisaf/plo5-mccfr:latest` (participant CsaBest),
+pulled from Docker Hub; no public source repo was found. The image holds an
+MCCFR blueprint over bucketed hands (fold, call, half-pot, pot) plus an
+opponent model that switches to a Restricted-Nash-Response counter-strategy
+once it is 90% sure which of its trained archetypes it faces (40+ actions).
+Same container setup and seeds as the Drew runs.
+
+| Seed | ShortStack bb/deal | 95% CI | Verdict |
+|---|---|---|---|
+| 11 | **-1.00** | -1.61 to -0.39 | loss |
+| 12 | **-0.66** | -1.30 to -0.01 | loss |
+| 13 | **-0.58** | -1.14 to -0.02 | loss |
+| 14 | **-1.09** | -1.68 to -0.49 | loss |
+
+Four losses (mean -0.83 bb/deal), 0 errors. Time is not the cause:
+ShortStack used 6.0-6.6 s of 8 s, PLO5-MCCFR only 3.4-3.8 s. It is the
+first container opponent to beat ShortStack, and by more than Drew's bot
+ever did.
+
+A second run with hand logs (`LOGS=1 tools/container_match.sh`, then `tools/dup_diff.py`) gave
+-0.61, -1.32, -0.62 and -1.13 (two losses, two chops, mean -0.92). Diffing
+its halves deal by deal: each deal's paired result is ShortStack's net with
+a set of cards minus PLO5-MCCFR's net with the same cards, so each deal is
+charged to the first decision where the two halves differ, where both bots
+faced the same history with the same cards.
+
+| First divergence | Deals | bb/deal | Avg per deal |
+|---|---|---|---|
+| SB first-in: ShortStack limps, PLO5 raises half-pot | 1498 | **-0.415** | -1.11 bb |
+| BB vs SB raise: ShortStack calls, PLO5 pot 3-bets | 111 | -0.089 | -3.20 bb |
+| Flop, checked to in position: ShortStack checks, PLO5 bets | 165 | -0.074 | -1.79 bb |
+| SB first-in: ShortStack pot-raises, PLO5 raises half-pot | 765 | -0.054 | -0.28 bb |
+| Flop first to act: ShortStack bets half-pot, PLO5 checks | 129 | -0.054 | -1.67 bb |
+
+By street of first divergence: preflop -0.71, flop -0.19, turn -0.02,
+river 0.00. Charging a deal to its first difference also charges the play
+that follows, so the preflop figure includes the postflop hands that the
+preflop choice leads to.
+
+| | ShortStack | PLO5-MCCFR |
+|---|---|---|
+| SB first-in: fold / limp / raise | 6 / 54 / 40% | 13 / 11 / 75% (almost all half-pot) |
+| Raise over a limp | 26% | 47% |
+| Fold to a flop / turn / river bet | 69 / 70 / 88% | 43 / 45 / 53% |
+| Those folds that gave up the best final hand (flop / turn / river) | 37 / 31 / 27% | 17 / 12 / 10% |
+| Bets without the best hand that got a fold (flop / turn / river) | 23 / 19 / 20% | 65 / 65 / 81% |
+
+Two leaks. Preflop, ShortStack limps the small blind more than half the
+time where PLO5-MCCFR opens with a half-pot raise, and it then calls 86%
+of raises and gives the pot up postflop. Postflop it is the Drew problem
+again, only bigger: ShortStack folds 69-88% to bets, so PLO5-MCCFR's bets
+without the best hand take the pot 65-81% of the time. ShortStack loses
+2.4 bb/deal in hands it folds after the flop and wins 1.3 in hands
+PLO5-MCCFR folds.
+
 ## What to try next
 
 Done since the last list: the preflop re-tune (batch 8, nothing beat the
@@ -446,7 +503,11 @@ current thresholds), `river_value_range` with a looser prior and
 `draw_raise` (both clearly negative, batch 8), and the cheaper equity call
 (kept, though extra samples turned out to be worth only about +0.05).
 
-* **Drew's bot** is the closest opponent: at 1 CPU with its bank intact the
+* **CsaBest's PLO5-MCCFR** beats ShortStack by 0.8-0.9 bb/deal. The diff
+  points at two fixes: raise far more small blinds instead of limping
+  (it opens 75% half-pot), and defend more against postflop bets (we fold
+  69-88% and its bluffs take the pot 65-81% of the time).
+* **Drew's bot** was the closest opponent: at 1 CPU with its bank intact the
   Docker matches are mostly chops in our favour (+0.32 mean), and with 3x
   the thinking time (`x_drew_fast`) it beats ShortStack by 0.7-1.0 bb/deal. It bets most flops and
   sizes its bluffs to our measured fold rate; we fold 68% of flop bets and
