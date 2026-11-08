@@ -139,6 +139,27 @@ slower than this laptop (about 1.2 ms per request) could empty the bank
 at 0.55. Cheaper equity calls (0.35 ms of each call is the weight function,
 not sampling) would buy samples without that risk.
 
+### Slow-machine time guard (kept)
+
+A real-clock half against an always-raising bot (the most decisions), with
+every equity call slowed and the judge's unseen per-request overhead raised
+to match (laptop: about 0.45 ms per request):
+
+| Machine | Before: charged / bank empty | After: charged / bank empty |
+|---|---|---|
+| 1x (0.4 ms overhead) | 5.0 s / no | 5.0 s / no (identical play: scale 1.00) |
+| 2x (0.9 ms) | 6.7 s / no | 6.6 s / no |
+| 3x (1.35 ms) | 8.0 s / **yes** | 6.0 s / no |
+| 4x (1.8 ms) | 8.0 s / **yes** | 5.8 s / no |
+
+The fix (idea from Drew's bot): `Brain` times a fixed 400-sample equity call
+(best of 5) at the start of each half and every 100 hands, on its own RNG.
+The ratio to this laptop (1.25-1.5 ms; reference 1.6 ms) scales the assumed
+per-request overhead and the cheap-fallback headroom, so a slow machine
+thinks less instead of running out. Under the simulator's virtual clock the
+probe is skipped, so A/B results are unaffected. Real judge vs Drew's bot
+afterwards: 4.08 s of 8 s, as before.
+
 ## What to try next
 
 * Preflop re-tune (`sb_raise_half_above`, `bb_raise_above`,

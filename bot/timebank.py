@@ -24,6 +24,15 @@ FALLBACK_HEADROOM = 2.5         # cheap 40-sample estimates only while this much
 HARD_CAP_SECONDS = 0.030        # never think longer than this on one decision
 MIN_SAMPLES = 60                # below this, equity is too noisy to be worth the time
 MAX_SAMPLES = 1500
+# Load scaling (an idea from Drew's sdplo bot): on a slower or busier machine
+# the judge's per-request overhead grows as much as our own code slows down,
+# and we cannot see it directly. Brain times a fixed equity probe (best of a
+# few runs) at the start of each half and every PROBE_EVERY hands; the probe
+# takes about REF_PROBE_SECONDS on the dev laptop, and the overhead estimate
+# scales with the ratio.
+REF_PROBE_SECONDS = 0.0016    # measured 1.25-1.5 ms; 1.6 leaves headroom for noise
+PROBE_EVERY = 100
+MAX_LOAD_SCALE = 4.0
 
 
 class TimeBank:
@@ -39,6 +48,7 @@ class TimeBank:
         self.requests = 0
         self.decisions = 0
         self.cost_per_sample = 4e-6   # refined from measurements
+        self.probes: list = []        # recent probe timings (seconds)
         self._t0 = 0.0
 
     # --- measuring ---------------------------------------------------------
@@ -58,11 +68,22 @@ class TimeBank:
         if n > 0 and elapsed > 0:
             self.cost_per_sample = 0.8 * self.cost_per_sample + 0.2 * (elapsed / n)
 
-    # --- budgeting ---------------------------------------------------------
+    def record_probe(self, seconds: float) -> None:
+        self.probes = (self.probes + [seconds])[-2:]
+
+    def load_scale(self) -> float:
+        """How much slower than the dev laptop this machine runs (>= 1)."""
+        if not self.probes:
+            return 1.0
+        return min(MAX_LOAD_SCALE, max(1.0, min(self.probes) / REF_PROBE_SECONDS))
+
+    def overhead(self) -> float:
+        """Estimated judge-charged time per request beyond our own code."""
+        return OVERHEAD_PER_REQUEST * self.load_scale()
 
     def charged_estimate(self) -> float:
         """Our best guess of what the judge has charged so far."""
-        return self.spent + self.requests * OVERHEAD_PER_REQUEST
+        return self.spent + self.requests * self.overhead()
 
     def remaining_logic(self) -> float:
         return self.bank * self.share - self.spent
@@ -72,7 +93,7 @@ class TimeBank:
         hands_left = max(1, self.num_hands - hand_index)
         per_hand = max(2.0, self.decisions / max(1, hand_index)) if hand_index else 3.0
         remaining = min(self.remaining_logic(),
-                        self.bank - 0.5 - self.charged_estimate() - hands_left * per_hand * OVERHEAD_PER_REQUEST)
+                        self.bank - 0.5 - self.charged_estimate() - hands_left * per_hand * self.overhead())
         if remaining <= 0:
             return 0.0
         return min(HARD_CAP_SECONDS, remaining / (hands_left * per_hand))

@@ -21,7 +21,7 @@ from bot.autopilot import AutopilotDetector
 from bot.profile import Profiler
 from bot.showdown import ShowdownLearner
 from bot.strategy import Strategy
-from bot.timebank import FALLBACK_HEADROOM, TimeBank
+from bot.timebank import FALLBACK_HEADROOM, PROBE_EVERY, TimeBank
 
 BRAIN_KEY = "brain"
 
@@ -54,12 +54,31 @@ class Brain:
         self._history = ()
         self._my_last = None
         self.strategy = Strategy(self)
+        self._probe_engine = EquityEngine(seed=99)   # own RNG: probes never change play
+        self._probe(runs=5)
+
+    def _probe(self, runs: int) -> None:
+        """Time a fixed equity call so the time bank can tell how slow this
+        machine is (see timebank.load_scale). Real clock only: under the
+        simulator's virtual clock play must stay deterministic."""
+        if self.clock is not time.perf_counter:
+            return
+        from bot import ranges
+        board = (25, 30, 34)
+        weight = ranges.postflop_weight(board, 0.3, 0.4)
+        best = float("inf")
+        for _ in range(runs):
+            start = time.perf_counter()
+            self._probe_engine.equity((0, 5, 10, 15, 20), board, 400, weight)
+            best = min(best, time.perf_counter() - start)
+        self.timebank.record_probe(best)
 
     # --- services used by the strategy ---------------------------------
 
     def samples(self, ctx: Ctx) -> int:
         n = self.timebank.samples(ctx.obs.hand_index)
-        if n == 0 and self.timebank.charged_estimate() < self.timebank.bank - FALLBACK_HEADROOM:
+        headroom = FALLBACK_HEADROOM * self.timebank.load_scale()
+        if n == 0 and self.timebank.charged_estimate() < self.timebank.bank - headroom:
             n = 40   # logic share used up, but the bank itself is fine: cheap estimate
         return n
 
@@ -90,6 +109,8 @@ class Brain:
         try:
             self.hands_seen += 1
             self.learn(result)
+            if self.hands_seen % PROBE_EVERY == 0:
+                self._probe(runs=2)
         finally:
             self.timebank.end(is_request=False)
 
