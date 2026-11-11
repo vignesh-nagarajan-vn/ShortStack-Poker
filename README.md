@@ -2,6 +2,8 @@
 
 **Heads-up Short Deck 5-card Pot-Limit Omaha bot for the TAMU Datathon Poker Bot Challenge.**
 
+🏆 **TAMU Datathon 2026 winner: Rev's Casino award.**
+
 - Starter bundle: [tamu-datathon-org/heads-up-bundle](https://github.com/tamu-datathon-org/heads-up-bundle)
 - Participant guide: [docs/starter-guide.md](docs/starter-guide.md)
 
